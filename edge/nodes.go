@@ -1,16 +1,16 @@
 package edge
 
 import (
+	"fracture/master"
+	"log"
 	"net"
 	"net/http"
 	"net/rpc"
-	"log"
-	"fracture/master"
 )
 
 type ChunkNode struct {
-	X, Y int64
-	Addr string
+	X, Y   int64
+	Addr   string
 	client *rpc.Client
 }
 

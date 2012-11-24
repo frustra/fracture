@@ -21,8 +21,10 @@ var players []string
 var privkey *rsa.PrivateKey
 var pubkey []byte
 var sharedkey []byte
-var clientcipher cipher.Block
-var servercipher cipher.Block
+var clientcfb cipher.Stream
+var servercfb cipher.Stream
+
+const ENCRYPTION_ENABLED = false
 
 func doHandshake(conn net.Conn) {
 	log.Printf("Got connection from %s", conn.RemoteAddr().String())
@@ -35,7 +37,8 @@ func doHandshake(conn net.Conn) {
 			break
 		}
 		if encrypted {
-			decrypt(clientcipher, buf[0:length], sharedkey)
+			log.Printf("Client: %s", hex.Dump(buf[0:length]))
+			decrypt(clientcfb, buf[0:length])
 		}
 		name := packName[buf[0]]
 		//log.Printf("Client: %s", hex.Dump(buf[0:length]))
@@ -52,30 +55,51 @@ func doHandshake(conn net.Conn) {
 				host, n := ReadString(buf, n)
 				port, n := ReadInt(buf, n)
 				log.Printf("%s, %s, %d", username, host, port)
-				packet := CreatePacket("login", int32(1298), "flat", byte(1), byte(0), byte(0), byte(0), byte(50))
-				tmp := packet.Serialize()
-				conn.Write(tmp)
-				//packet := CreatePacket("encryptrequest", "555555", int16(len(pubkey)), pubkey, int16(4), []byte{0x05, 0x52, 0x88, 0x04})
-				//conn.Write(packet.Serialize())
+				if ENCRYPTION_ENABLED {
+					packet := CreatePacket("encryptrequest", "555555", int16(len(pubkey)), pubkey, int16(4), []byte{0x05, 0x52, 0x88, 0x04})
+					conn.Write(packet.Serialize())
+				} else {
+					packet := CreatePacket("login", int32(1298), "flat", byte(1), byte(0), byte(0), byte(0), byte(50))
+					conn.Write(packet.Serialize())
+					packet = CreatePacket("spawnpos", int32(0), int32(32), int32(0))
+					conn.Write(packet.Serialize())
+					packet = CreatePacket("playerposlook", float64(0), float64(64), float64(0), float64(0), float32(0), float32(0), bool(true))
+					conn.Write(packet.Serialize())
+				}
 			}
 		case "encryptresponse":
-			n := 1
-			keylen, n := ReadShort(buf, n)
-			key, n := ReadBytes(buf, n, keylen)
-			sharedkey, _ = rsa.DecryptPKCS1v15(rand.Reader, privkey, key)
-			clientcipher, _ = aes.NewCipher(sharedkey)
-			servercipher, _ = aes.NewCipher(sharedkey)
-			//encrypted = true
-			//packet := CreatePacket("encryptresponse", "555555", int16(0), []byte{}, int16(0), []byte{})
-			//conn.Write(packet.Serialize())
+			if ENCRYPTION_ENABLED {
+				n := 1
+				keylen, n := ReadShort(buf, n)
+				key, n := ReadBytes(buf, n, keylen)
+				sharedkey, _ = rsa.DecryptPKCS1v15(rand.Reader, privkey, key)
+				clientcipher, _ := aes.NewCipher(sharedkey)
+				clientcfb = cipher.NewCFBDecrypter(clientcipher, sharedkey)
+				servercipher, _ := aes.NewCipher(sharedkey)
+				servercfb = cipher.NewCFBEncrypter(servercipher, sharedkey)
+				encrypted = true
+				packet := CreatePacket("encryptresponse", int16(0), []byte{}, int16(0), []byte{})
+				conn.Write(packet.Serialize())
+			}
 		case "clientstatuses":
-			packet := CreatePacket("login", int32(1298), "flat", byte(1), byte(0), byte(0), byte(0), byte(50))
-			tmp := packet.Serialize()
-			tmp2 := encrypt(servercipher, tmp, sharedkey)
-			log.Printf("Client: %s", hex.Dump(buf[0:length]))
-			log.Printf("Server: %s", hex.Dump(tmp))
-			log.Printf("Serverc: %s", hex.Dump(tmp2))
-			conn.Write(tmp2)
+			if ENCRYPTION_ENABLED {
+				packet := CreatePacket("login", int32(1298), "flat", byte(1), byte(0), byte(0), byte(0), byte(50))
+				tmp := packet.Serialize()
+				tmp2 := encrypt(servercfb, tmp)
+				log.Printf("Key: %s", hex.Dump(sharedkey))
+				log.Printf("Client: %s", hex.Dump(buf[0:length]))
+				log.Printf("Server: %s", hex.Dump(tmp))
+				log.Printf("Serverc: %s", hex.Dump(tmp2))
+				conn.Write(tmp2)
+			}
+		case "player":
+		case "playerpos":
+		case "playerlook":
+		case "playerposlook":
+		case "keepalive":
+		case "kick":
+			msg, _ := ReadString(buf, 1)
+			log.Printf("Client disconnected with message: %s", msg)
 		default:
 			log.Printf("Unknown: %s", hex.Dump(buf[0:length]))
 		}
@@ -93,11 +117,11 @@ func init() {
 }
 
 func Serve() {
-	/*c := new(chunk.Client)
+	c := new(chunk.Client)
 	c.Connect("localhost:12444")
 	c.SetBlock(0, 0, 0, 2)
 	ch := c.GetChunk(0)
-	log.Printf("%d should equal 2", ch.Data[0][0][0])*/
+	log.Printf("%d should equal 2", ch.Data[0][0][0])
 
 	flag.Parse()
 	log.Println("Starting up edge server")
@@ -112,12 +136,12 @@ func Serve() {
 	log.Printf("Listening for TCP on %s", service)
 
 	packet := CreatePacket("kick", JoinStrings(
-		[]byte{0xa7, 0x31},
-		"49",              // Protocol Version (1.4.5)
-		"1.4.5",           // Minecraft version
-		"Fracture Server", // MOTD
-		"0",               // Online players
-		"50",              // Max players
+		[]byte{0xa7, 0x31}, // Magic characters
+		"49",               // Protocol Version (1.4.5)
+		"1.4.5",            // Minecraft version
+		"Fracture Server",  // MOTD
+		"0",                // Online players
+		"50",               // Max players
 	))
 	serverInfo = packet.Serialize()
 
@@ -139,14 +163,12 @@ func assertNoErr(err error) {
 	}
 }
 
-func encrypt(block cipher.Block, plaintext []byte, iv []byte) []byte {
-	cfb := cipher.NewCFBEncrypter(block, iv)
+func encrypt(cfb cipher.Stream, plaintext []byte) []byte {
 	ciphertext := make([]byte, len(plaintext))
 	cfb.XORKeyStream(ciphertext, plaintext)
 	return ciphertext
 }
 
-func decrypt(block cipher.Block, ciphertext []byte, iv []byte) {
-	cfbdec := cipher.NewCFBDecrypter(block, iv)
-	cfbdec.XORKeyStream(ciphertext, ciphertext)
+func decrypt(cfb cipher.Stream, ciphertext []byte) {
+	cfb.XORKeyStream(ciphertext, ciphertext)
 }

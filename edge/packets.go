@@ -122,6 +122,13 @@ func (p Packet) Serialize() []byte {
 		case byte:
 			buf[n] = i
 			n++
+		case bool:
+			if i {
+				buf[n] = 0x01
+			} else {
+				buf[n] = 0x00
+			}
+			n++
 		case int16:
 			buf[n] = byte((i >> 8) & 0xFF)
 			buf[n+1] = byte(i & 0xFF)
