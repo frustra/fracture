@@ -101,6 +101,7 @@ func Serve() {
 
 	flag.Parse()
 	log.Println("Starting up edge server")
+	ListenMaster()
 	service := ":" + strconv.Itoa(port)
 	addr, err := net.ResolveTCPAddr("tcp4", service)
 	assertNoErr(err)
