@@ -1,61 +1,94 @@
 package edge
 
 import (
-	"bytes"
-	//"encoding/hex"
 	"flag"
-	"fmt"
 	"log"
 	//"fracture/chunk"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/hex"
 	"net"
-	"os"
 	"strconv"
 )
 
 var port int
 var port2 int
 var serverInfo []byte
-var responseList map[string]string
 var players []string
+var privkey *rsa.PrivateKey
+var pubkey []byte
+var sharedkey []byte
+var clientcipher cipher.Block
+var servercipher cipher.Block
 
-func handleConn(conn net.Conn) {
-	remoteAddr := conn.RemoteAddr().String()
-	fmt.Printf("Got connection from %s\n", remoteAddr)
+func doHandshake(conn net.Conn) {
+	log.Printf("Got connection from %s", conn.RemoteAddr().String())
 
 	buf := make([]byte, 65536)
-	var connout net.Conn
+	encrypted := false
 	for {
-		n, err := conn.Read(buf)
+		length, err := conn.Read(buf)
 		if err != nil {
 			break
 		}
-		//fmt.Printf("Client: %s", hex.Dump(buf[0:n]))
-		if buf[0] == 0xFE && buf[1] == 0x01 {
-			//fmt.Printf("Server Info: %s", hex.Dump(serverInfo))
-			_, err := conn.Write(serverInfo)
-			if err != nil {
-				break
-			}
-		} else if connout == nil {
-			packet := CreatePacket("kick", "Server will bbl.")
-			_, err := conn.Write(packet.Serialize())
-			if err != nil {
-				break
-			}
-		} else {
-			_, err = connout.Write(buf[0:n])
-			if err != nil {
-				break
-			}
+		if encrypted {
+			decrypt(clientcipher, buf[0:length], sharedkey)
 		}
+		name := packName[buf[0]]
+		//log.Printf("Client: %s", hex.Dump(buf[0:length]))
+		switch name {
+		case "listping":
+			if buf[1] == 0x01 {
+				//log.Printf("Server Info: %s", hex.Dump(serverInfo))
+				conn.Write(serverInfo)
+			}
+		case "handshake":
+			if buf[1] == 49 { // Protocol version
+				n := 2
+				username, n := ReadString(buf, n)
+				host, n := ReadString(buf, n)
+				port, n := ReadInt(buf, n)
+				log.Printf("%s, %s, %d", username, host, port)
+				packet := CreatePacket("login", int32(1298), "flat", byte(1), byte(0), byte(0), byte(0), byte(50))
+				tmp := packet.Serialize()
+				conn.Write(tmp)
+				//packet := CreatePacket("encryptrequest", "555555", int16(len(pubkey)), pubkey, int16(4), []byte{0x05, 0x52, 0x88, 0x04})
+				//conn.Write(packet.Serialize())
+			}
+		case "encryptresponse":
+			n := 1
+			keylen, n := ReadShort(buf, n)
+			key, n := ReadBytes(buf, n, keylen)
+			sharedkey, _ = rsa.DecryptPKCS1v15(rand.Reader, privkey, key)
+			clientcipher, _ = aes.NewCipher(sharedkey)
+			servercipher, _ = aes.NewCipher(sharedkey)
+			//encrypted = true
+			//packet := CreatePacket("encryptresponse", "555555", int16(0), []byte{}, int16(0), []byte{})
+			//conn.Write(packet.Serialize())
+		case "clientstatuses":
+			packet := CreatePacket("login", int32(1298), "flat", byte(1), byte(0), byte(0), byte(0), byte(50))
+			tmp := packet.Serialize()
+			tmp2 := encrypt(servercipher, tmp, sharedkey)
+			log.Printf("Client: %s", hex.Dump(buf[0:length]))
+			log.Printf("Server: %s", hex.Dump(tmp))
+			log.Printf("Serverc: %s", hex.Dump(tmp2))
+			conn.Write(tmp2)
+		default:
+			log.Printf("Unknown: %s", hex.Dump(buf[0:length]))
+		}
+		//packet := CreatePacket("kick", "Server will bbl.")
+		//conn.Write(packet.Serialize())
 	}
 	conn.Close()
-	if connout != nil {
-		connout.Close()
-	}
 }
 
 func init() {
+	InitPackets()
+	privkey, _ = rsa.GenerateKey(rand.Reader, 1024)
+	pubkey, _ = x509.MarshalPKIXPublicKey(&privkey.PublicKey)
 	flag.IntVar(&port, "port", 25565, "TCP port to listen on")
 }
 
@@ -75,31 +108,18 @@ func Serve() {
 	listener, err := net.ListenTCP("tcp", addr)
 	assertNoErr(err)
 
-	fmt.Printf("Listening for TCP on %s\n", service)
+	log.Printf("Listening for TCP on %s", service)
 
-	responseList = make(map[string]string)
-	responseList["hostname"] = "Fracture Server"
-	responseList["gametype"] = "SMP"
-	responseList["game_id"] = "MINECRAFT"
-	responseList["version"] = "1.4.4"
-	responseList["plugins"] = "Plugins"
-	responseList["map"] = "lobby"
-	responseList["numplayers"] = "0"
-	responseList["maxplayers"] = "50"
-	responseList["hostport"] = "25565"
-	responseList["hostip"] = "63.141.238.132"
-	serverInfo = []byte{0xff, 0, 0, 0, 0xa7, 0, 0x31, 0, 0, 0,
-		0x34, 0, 0x39, 0, 0} // Protocol version: '49'
-	serverInfo = bytes.Join([][]byte{
-		serverInfo,
-		toUtf16ByteArrayA(responseList["version"]), []byte{0, 0},
-		toUtf16ByteArrayA(responseList["hostname"]), []byte{0, 0},
-		toUtf16ByteArrayA(responseList["numplayers"]), []byte{0, 0},
-		toUtf16ByteArrayA(responseList["maxplayers"])},
-		[]byte{})
+	packet := CreatePacket("kick", JoinStrings(
+		[]byte{0xa7, 0x31},
+		"49",              // Protocol Version (1.4.5)
+		"1.4.5",           // Minecraft version
+		"Fracture Server", // MOTD
+		"0",               // Online players
+		"50",              // Max players
+	))
+	serverInfo = packet.Serialize()
 
-	serverInfo[3] = (byte)(((len(serverInfo) - 3) >> 9) & 0xFF)
-	serverInfo[2] = (byte)(((len(serverInfo) - 3) >> 1) & 0xFF)
 	players = make([]string, 0)
 
 	for {
@@ -108,22 +128,24 @@ func Serve() {
 			continue
 		}
 
-		go handleConn(conn)
+		go doHandshake(conn)
 	}
-}
-
-func toUtf16ByteArrayA(str string) []byte {
-	buf := make([]byte, len(str)*2)
-	for i := 0; i < len(str); i++ {
-		buf[i*2] = 0
-		buf[i*2+1] = str[i]
-	}
-	return buf
 }
 
 func assertNoErr(err error) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal: %s\n", err.Error())
-		os.Exit(1)
+		log.Fatalf("Fatal: %s", err.Error())
 	}
+}
+
+func encrypt(block cipher.Block, plaintext []byte, iv []byte) []byte {
+	cfb := cipher.NewCFBEncrypter(block, iv)
+	ciphertext := make([]byte, len(plaintext))
+	cfb.XORKeyStream(ciphertext, plaintext)
+	return ciphertext
+}
+
+func decrypt(block cipher.Block, ciphertext []byte, iv []byte) {
+	cfbdec := cipher.NewCFBDecrypter(block, iv)
+	cfbdec.XORKeyStream(ciphertext, ciphertext)
 }
