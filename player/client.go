@@ -1,8 +1,8 @@
 package player
 
 import (
-	"net/rpc"
 	"log"
+	"net/rpc"
 )
 
 type Client struct {

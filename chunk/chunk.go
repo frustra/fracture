@@ -1,12 +1,11 @@
 package chunk
 
-import (
-)
+import ()
 
 // For RPC
 type Block struct {
 	X, Y, Z uint8
-	Id uint8
+	Id      uint8
 }
 
 // Actual types
@@ -31,6 +30,6 @@ func (col *Column) GetChunks(unused bool, chunks *[16]*Chunk) error {
 }
 
 func (col *Column) SetBlock(b Block, unused *bool) error {
-	col.chunks[b.Y >> 4].Data[b.X][b.Y % 16][b.Z] = b.Id
+	col.chunks[b.Y>>4].Data[b.X][b.Y%16][b.Z] = b.Id
 	return nil
 }

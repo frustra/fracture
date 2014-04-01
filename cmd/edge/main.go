@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fracture/edge"
+	"github.com/frustra/fracture/edge"
 )
 
 func main() {

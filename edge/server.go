@@ -1,15 +1,14 @@
 package edge
 
 import (
-	"flag"
-	"log"
-	//"fracture/chunk"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
+	"flag"
+	"log"
 	"net"
 	"strconv"
 )

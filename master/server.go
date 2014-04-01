@@ -1,15 +1,13 @@
 package master
 
-import(
+import (
+	"log"
 	"net"
 	"net/http"
 	"net/rpc"
-	"log"
-//	"time"
 )
 
 // Variable naming is shit in this file. Ignore it for now.
-
 
 type ChunkServer struct {
 	X, Z int64
@@ -17,7 +15,7 @@ type ChunkServer struct {
 }
 
 type EdgeServer struct {
-	Addr string
+	Addr   string
 	client *rpc.Client
 }
 
@@ -29,10 +27,9 @@ func (e *EdgeServer) BroadcastRemovedChunk(c *ChunkServer) {
 	e.client.Call("ChunkNodes.RemoveChunkNode", c, nil)
 }
 
-
 type Server struct {
 	Chunks map[string]*ChunkServer
-	Edges map[string]*EdgeServer
+	Edges  map[string]*EdgeServer
 }
 
 func (s *Server) AnnounceChunkServer(c *ChunkServer, unused *bool) error {

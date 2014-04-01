@@ -5,7 +5,7 @@ import (
 )
 
 type Group struct {
-	players []*Player
+	players    []*Player
 	maxPlayers int
 }
 

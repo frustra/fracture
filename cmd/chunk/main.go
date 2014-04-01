@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fracture/chunk"
 	"flag"
+	"github.com/frustra/fracture/chunk"
 )
 
 var x = flag.Int64("x", 0, "x offset")

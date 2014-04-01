@@ -1,11 +1,10 @@
 package player
 
-import(
+import (
+	"log"
 	"net"
 	"net/http"
 	"net/rpc"
-	"log"
-//	"time"
 )
 
 func Serve(maxPlayers int, addr string) {

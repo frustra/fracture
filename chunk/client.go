@@ -1,8 +1,8 @@
 package chunk
 
 import (
-	"net/rpc"
 	"log"
+	"net/rpc"
 )
 
 type Client struct {

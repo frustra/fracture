@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fracture/player"
 	"flag"
+	"github.com/frustra/fracture/player"
 )
 
 var maxPlayers = flag.Int("max", 16, "max players")

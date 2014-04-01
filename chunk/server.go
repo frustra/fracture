@@ -1,12 +1,12 @@
 package chunk
 
-import(
+import (
+	"github.com/frustra/fracture/master"
+	"log"
 	"net"
 	"net/http"
 	"net/rpc"
-	"log"
 	"time"
-	"fracture/master"
 )
 
 var col *Column

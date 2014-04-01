@@ -1,7 +1,7 @@
 package edge
 
 import (
-	"fracture/master"
+	"github.com/frustra/fracture/master"
 	"log"
 	"net"
 	"net/http"
