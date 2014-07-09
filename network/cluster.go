@@ -71,11 +71,11 @@ func (c *Cluster) Part() {
 }
 
 func (c *Cluster) NotifyJoin(n *memberlist.Node) {
-	log.Printf("Node %s joined.", n.Name)
+	log.Printf("%s joined from %s:%d", n.Name, n.Addr, n.Port)
 }
 
 func (c *Cluster) NotifyLeave(n *memberlist.Node) {
-	log.Printf("Node %s left.", n.Name)
+	log.Printf("%s left", n.Name)
 }
 
 func (c *Cluster) NotifyUpdate(n *memberlist.Node) {

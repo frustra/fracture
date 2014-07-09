@@ -1,0 +1,6 @@
+package protobuf;
+
+message NodeMeta {
+	required string addr = 1;
+	required string type = 2;
+}

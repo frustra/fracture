@@ -43,12 +43,12 @@ func main() {
 		log.Fatal("Invalid role: ", role)
 	}
 
-	// cluster.SetNodeName(server.NodeType(), server.NodePort())
+	// cluster.SetNodeType(server.NodeType())
+	// cluster.SetNodeAddr(":" + server.NodePort())
 
 	if err := cluster.Join(); err != nil {
 		log.Fatal("Failed to join cluster: ", err)
 	}
-	log.Print("Booting up as ", cluster.Name())
 
 	interrupts := make(chan os.Signal, 1)
 	signal.Notify(interrupts, os.Interrupt)
