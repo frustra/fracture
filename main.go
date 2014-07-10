@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 
 	"github.com/frustra/fracture/edge"
 	"github.com/frustra/fracture/network"
@@ -43,8 +44,8 @@ func main() {
 		log.Fatal("Invalid role: ", role)
 	}
 
-	// cluster.SetNodeType(server.NodeType())
-	// cluster.SetNodeAddr(":" + server.NodePort())
+	cluster.NodeType = server.NodeType()
+	cluster.NodeAddr = ":" + strconv.Itoa(server.NodePort())
 
 	if err := cluster.Join(); err != nil {
 		log.Fatal("Failed to join cluster: ", err)

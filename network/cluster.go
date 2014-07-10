@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
+	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/frustra/fracture/protobuf"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -36,6 +38,7 @@ func CreateCluster(addr, existing string) (*Cluster, error) {
 		existing: existing,
 	}
 
+	config.Delegate = c
 	config.Events = c
 	config.LogOutput = ioutil.Discard
 	config.Name = uuid.New()
@@ -48,6 +51,9 @@ type Cluster struct {
 	config  *memberlist.Config
 
 	existing string
+
+	NodeType, NodeAddr string
+	nodeMeta           []byte
 }
 
 func (c *Cluster) Name() string {
@@ -55,6 +61,18 @@ func (c *Cluster) Name() string {
 }
 
 func (c *Cluster) Join() error {
+	meta := &protobuf.NodeMeta{
+		Addr: proto.String(c.NodeAddr),
+		Type: proto.String(c.NodeType),
+	}
+
+	nodeMeta, err := proto.Marshal(meta)
+	if err != nil {
+		return err
+	}
+
+	c.nodeMeta = nodeMeta
+
 	m, err := memberlist.Create(c.config)
 	if err != nil {
 		return err
@@ -71,7 +89,18 @@ func (c *Cluster) Part() {
 }
 
 func (c *Cluster) NotifyJoin(n *memberlist.Node) {
-	log.Printf("%s joined from %s:%d", n.Name, n.Addr, n.Port)
+	meta := &protobuf.NodeMeta{}
+	err := proto.Unmarshal(n.Meta, meta)
+	if err != nil {
+		log.Print("error unmarshalling node metadata: ", err)
+	}
+
+	metaHost, metaPortString, err := net.SplitHostPort(meta.GetAddr())
+	if metaHost == "" {
+		metaHost = n.Addr.String()
+	}
+
+	log.Printf("%s %s:%s [%s] joined from %s:%d", meta.GetType(), metaHost, metaPortString, n.Name, n.Addr, n.Port)
 }
 
 func (c *Cluster) NotifyLeave(n *memberlist.Node) {
@@ -79,5 +108,25 @@ func (c *Cluster) NotifyLeave(n *memberlist.Node) {
 }
 
 func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
+
+}
+
+func (c *Cluster) NodeMeta(limit int) []byte {
+	return c.nodeMeta
+}
+
+func (c *Cluster) NotifyMsg([]byte) {
+
+}
+
+func (c *Cluster) GetBroadcasts(overhead, limit int) [][]byte {
+	return nil
+}
+
+func (c *Cluster) LocalState(join bool) []byte {
+	return nil
+}
+
+func (c *Cluster) MergeRemoteState(buf []byte, join bool) {
 
 }
