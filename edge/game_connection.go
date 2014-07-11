@@ -3,8 +3,8 @@ package edge
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"io"
+	"log"
 	"net"
 	"time"
 
@@ -41,7 +41,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 		id, buf, err := protocol.ReadPacket(cc.ConnEncrypted)
 		if err != nil {
 			if err != io.EOF {
-				fmt.Printf("Error: %s\n", err.Error())
+				log.Printf("Error reading packet: %s", err.Error())
 			}
 			return
 		} else if id == 0x01 {
@@ -73,7 +73,7 @@ func (cc *GameConnection) HandleConnection() {
 		if err != nil {
 			err2, ok := err.(net.Error)
 			if ok && err2.Timeout() {
-				fmt.Printf("Error Timeout: %s\n", err2.Error())
+				log.Printf("Timeout handling connection: %s", err2.Error())
 				return
 			} else {
 				return
@@ -82,12 +82,12 @@ func (cc *GameConnection) HandleConnection() {
 			switch id {
 			case 0x00:
 				if state == 1 {
-					fmt.Printf("Server pinged from: %s\n", remoteAddr)
+					log.Printf("Server pinged from: %s", remoteAddr)
 					protocol.WriteNewPacket(cc.Conn, 0x00, protocol.CreateStatusResponse("1.7.10", 5, 0, cc.Server.MaxPlayers, protocol.CreateJsonMessage("Fracture Distributed Server", "green")))
 				} else if state == 2 {
 					cc.Username, _ = protocol.ReadString(buf, 0)
-					fmt.Printf("Got connection from %s\n", cc.Username)
-					defer fmt.Printf("Connection closed for %s\n", cc.Username)
+					log.Printf("Got connection from %s", cc.Username)
+					defer log.Printf("Connection closed for %s", cc.Username)
 
 					pubKey := cc.Server.keyPair.Serialize()
 					verifyToken = protocol.GenerateKey(16)
@@ -108,26 +108,26 @@ func (cc *GameConnection) HandleConnection() {
 
 					verifyToken2, err := protocol.DecryptRSABytes(tokenEncrypted, cc.Server.keyPair)
 					if err != nil {
-						fmt.Printf("Error: %s\n", err.Error())
+						log.Printf("Error decrypting RSA token: %s", err.Error())
 						return
 					} else if !bytes.Equal(verifyToken, verifyToken2) {
-						fmt.Printf("Error: Verify token did not match!")
+						log.Printf("Error: verification token did not match!")
 						return
 					}
 					sharedSecret, err := protocol.DecryptRSABytes(secretEncrypted, cc.Server.keyPair)
 					if err != nil {
-						fmt.Printf("Error: %s\n", err.Error())
+						log.Printf("Error decrypting RSA secret: %s", err.Error())
 						return
 					}
 
 					cc.ConnEncrypted, err = protocol.NewAESConn(cc.Conn, sharedSecret)
 					if err != nil {
-						fmt.Printf("Error: %s\n", err.Error())
+						log.Printf("Error creating AES connection: %s", err.Error())
 					}
 
 					uuid, err := protocol.CheckAuth(cc.Username, "", cc.Server.keyPair, sharedSecret)
 					if err != nil {
-						fmt.Printf("Failed to verify username: %s\n%s\n", cc.Username, err)
+						log.Printf("Failed to verify username %s: %s", cc.Username, err)
 						protocol.WriteNewPacket(cc.ConnEncrypted, 0x00, protocol.CreateJsonMessage("Failed to verify username!", ""))
 						return
 					}
@@ -146,7 +146,7 @@ func (cc *GameConnection) HandleConnection() {
 					protocol.WriteNewPacket(cc.Conn, 0x01, time)
 				}
 			default:
-				fmt.Printf("Unknown Packet (state:%d): 0x%X : %s\n", state, id, hex.Dump(buf))
+				log.Printf("Unknown Packet (state:%d): 0x%X : %s", state, id, hex.Dump(buf))
 			}
 		}
 	}

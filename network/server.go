@@ -1,7 +1,7 @@
 package network
 
 type Server interface {
-	Serve()
+	Serve() error
 
 	NodeType() string
 	NodePort() int

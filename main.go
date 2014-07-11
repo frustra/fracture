@@ -60,5 +60,5 @@ func main() {
 		}
 	}()
 
-	server.Serve()
+	log.Fatal(server.Serve())
 }

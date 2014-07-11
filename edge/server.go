@@ -1,9 +1,8 @@
 package edge
 
 import (
-	"fmt"
+	"log"
 	"net"
-	"os"
 
 	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
@@ -19,18 +18,24 @@ type Server struct {
 	Clients map[*GameConnection]bool
 }
 
-func (s *Server) Serve() {
+func (s *Server) Serve() error {
 	addr, err := net.ResolveTCPAddr("tcp4", s.Addr)
-	assertNoErr(err)
+	if err != nil {
+		return err
+	}
 
 	listener, err := net.ListenTCP("tcp", addr)
-	assertNoErr(err)
+	if err != nil {
+		return err
+	}
 
 	tmpkey, err := protocol.GenerateKeyPair(1024)
-	assertNoErr(err)
+	if err != nil {
+		return err
+	}
 	s.keyPair = tmpkey
 
-	fmt.Printf("Listening for TCP on %s\n", s.Addr)
+	log.Printf("Game connection listening on %s\n", s.Addr)
 	defer listener.Close()
 
 	s.Clients = make(map[*GameConnection]bool)
@@ -53,11 +58,4 @@ func (s *Server) NodeType() string {
 
 func (s *Server) NodePort() int {
 	return 1234
-}
-
-func assertNoErr(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal: %s\n", err.Error())
-		os.Exit(1)
-	}
 }
