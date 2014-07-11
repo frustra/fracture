@@ -6,24 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"time"
 
 	"github.com/frustra/fracture/edge/protocol"
-	"github.com/frustra/fracture/network"
 )
 
-type Server struct {
-	Addr       string
-	MaxPlayers int
-	Cluster    *network.Cluster
-
-	keyPair *protocol.KeyPair
-
-	Clients map[*ClientConnection]bool
-}
-
-type ClientConnection struct {
+type GameConnection struct {
 	Server        *Server
 	Conn          *net.TCPConn
 	ConnEncrypted *protocol.AESConn
@@ -32,7 +20,7 @@ type ClientConnection struct {
 	Username string
 }
 
-func (cc *ClientConnection) HandleEncryptedConnection() {
+func (cc *GameConnection) HandleEncryptedConnection() {
 	cc.Connected = true
 	defer func() {
 		for client, connected := range cc.Server.Clients {
@@ -69,7 +57,7 @@ func (cc *ClientConnection) HandleEncryptedConnection() {
 	}
 }
 
-func (cc *ClientConnection) HandleConnection() {
+func (cc *GameConnection) HandleConnection() {
 	defer func() {
 		delete(cc.Server.Clients, cc)
 		cc.Connected = false
@@ -161,48 +149,5 @@ func (cc *ClientConnection) HandleConnection() {
 				fmt.Printf("Unknown Packet (state:%d): 0x%X : %s\n", state, id, hex.Dump(buf))
 			}
 		}
-	}
-}
-
-func (s *Server) Serve() {
-	addr, err := net.ResolveTCPAddr("tcp4", s.Addr)
-	assertNoErr(err)
-
-	listener, err := net.ListenTCP("tcp", addr)
-	assertNoErr(err)
-
-	tmpkey, err := protocol.GenerateKeyPair(1024)
-	assertNoErr(err)
-	s.keyPair = tmpkey
-
-	fmt.Printf("Listening for TCP on %s\n", s.Addr)
-	defer listener.Close()
-
-	s.Clients = make(map[*ClientConnection]bool)
-
-	for {
-		conn, err := listener.AcceptTCP()
-		if err != nil {
-			continue
-		}
-
-		client := &ClientConnection{s, conn, nil, true, ""}
-		s.Clients[client] = true
-		go client.HandleConnection()
-	}
-}
-
-func (s *Server) NodeType() string {
-	return "edge"
-}
-
-func (s *Server) NodePort() int {
-	return 1234
-}
-
-func assertNoErr(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal: %s\n", err.Error())
-		os.Exit(1)
 	}
 }
