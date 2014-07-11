@@ -19,12 +19,7 @@ type Server struct {
 }
 
 func (s *Server) Serve() error {
-	addr, err := net.ResolveTCPAddr("tcp4", s.Addr)
-	if err != nil {
-		return err
-	}
-
-	listener, err := net.ListenTCP("tcp", addr)
+	listener, err := net.Listen("tcp", s.Addr)
 	if err != nil {
 		return err
 	}
@@ -41,7 +36,7 @@ func (s *Server) Serve() error {
 	s.Clients = make(map[*GameConnection]bool)
 
 	for {
-		conn, err := listener.AcceptTCP()
+		conn, err := listener.Accept()
 		if err != nil {
 			continue
 		}

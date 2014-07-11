@@ -14,7 +14,7 @@ import (
 
 type GameConnection struct {
 	Server        *Server
-	Conn          *net.TCPConn
+	Conn          net.Conn
 	ConnEncrypted *protocol.AESConn
 	Connected     bool
 

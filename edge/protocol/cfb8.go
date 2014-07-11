@@ -7,14 +7,14 @@ import (
 )
 
 type AESConn struct {
-	conn    *net.TCPConn
+	conn    net.Conn
 	block   cipher.Block
 	readIV  []byte
 	writeIV []byte
 	scratch []byte
 }
 
-func NewAESConn(conn *net.TCPConn, secret []byte) (*AESConn, error) {
+func NewAESConn(conn net.Conn, secret []byte) (*AESConn, error) {
 	block, err := aes.NewCipher(secret)
 	if err != nil {
 		return nil, err
