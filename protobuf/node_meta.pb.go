@@ -2,15 +2,6 @@
 // source: protobuf/node_meta.proto
 // DO NOT EDIT!
 
-/*
-Package protobuf is a generated protocol buffer package.
-
-It is generated from these files:
-	protobuf/node_meta.proto
-
-It has these top-level messages:
-	NodeMeta
-*/
 package protobuf
 
 import proto "code.google.com/p/gogoprotobuf/proto"

@@ -1,0 +1,15 @@
+package protobuf;
+
+message InternalMessage {
+	extensions 100 to 199;
+}
+
+message ChunkRequest {
+	required int64 x = 1;
+	required int64 y = 2;
+}
+
+extend InternalMessage {
+	optional ChunkRequest chunk_request = 100;
+	/* optional ChunkResponse chunk_response; */
+}
