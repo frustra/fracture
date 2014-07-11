@@ -1,8 +1,7 @@
-package edge
+package chunk
 
 import (
 	"log"
-	"net"
 
 	"github.com/frustra/fracture/network"
 )
@@ -18,6 +17,10 @@ type Server struct {
 func (s *Server) Serve() error {
 	log.Printf("Chunk server loading on %s\n", s.Addr)
 	return network.ServeInternal(s.Addr, s)
+}
+
+func (s *Server) HandleMessage(message interface{}) {
+	log.Print("Handler invoked: ", message)
 }
 
 func (s *Server) NodeType() string {

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strconv"
 
+	"github.com/frustra/fracture/chunk"
 	"github.com/frustra/fracture/edge"
 	"github.com/frustra/fracture/network"
 )
@@ -39,6 +40,9 @@ func main() {
 	switch role {
 	case "edge":
 		server = &edge.Server{Addr: *addr, MaxPlayers: *players, Cluster: cluster}
+
+	case "chunk":
+		server = &chunk.Server{Addr: *addr, Cluster: cluster}
 
 	default:
 		log.Fatal("Invalid role: ", role)
