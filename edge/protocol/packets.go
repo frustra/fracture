@@ -2,8 +2,10 @@ package protocol
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
+	"reflect"
 )
 
 type Packet struct {
@@ -78,7 +80,17 @@ func (p Packet) Serialize() []byte {
 			buf[n] = byte((i >> 8) & 0xFF)
 			buf[n+1] = byte(i & 0xFF)
 			n += 2
+		case uint16:
+			buf[n] = byte((i >> 8) & 0xFF)
+			buf[n+1] = byte(i & 0xFF)
+			n += 2
 		case int32:
+			buf[n] = byte((i >> 24) & 0xFF)
+			buf[n+1] = byte((i >> 16) & 0xFF)
+			buf[n+2] = byte((i >> 8) & 0xFF)
+			buf[n+3] = byte(i & 0xFF)
+			n += 4
+		case uint32:
 			buf[n] = byte((i >> 24) & 0xFF)
 			buf[n+1] = byte((i >> 16) & 0xFF)
 			buf[n+2] = byte((i >> 8) & 0xFF)
@@ -136,6 +148,8 @@ func (p Packet) Serialize() []byte {
 				buf[n] = buf2[k]
 				n++
 			}
+		default:
+			fmt.Printf("Unknown serialization: (%d) %s\n", j, reflect.ValueOf(p.Fields[j]).String())
 		}
 	}
 	return append(Uvarint{uint64(n)}.Bytes(), buf[0:n]...)
@@ -151,6 +165,7 @@ func WriteNewPacket(conn io.Writer, id uint64, v ...interface{}) error {
 
 func WritePacket(conn io.Writer, p Serializable) error {
 	buf := p.Serialize()
+	// fmt.Println(hex.Dump(buf))
 	n := 0
 	for n < len(buf) {
 		n2, err := conn.Write(buf[n:])

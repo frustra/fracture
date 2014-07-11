@@ -2,6 +2,7 @@ package edge
 
 import (
 	"bytes"
+	"compress/zlib"
 	"encoding/hex"
 	"io"
 	"log"
@@ -136,7 +137,30 @@ func (cc *GameConnection) HandleConnection() {
 					protocol.WriteNewPacket(cc.ConnEncrypted, 0x05, int32(0), int32(0), int32(0))
 					protocol.WriteNewPacket(cc.ConnEncrypted, 0x39, byte(1), float32(5), float32(5))
 					protocol.WriteNewPacket(cc.ConnEncrypted, 0x08, float64(0), float64(128), float64(0), float32(0), float32(0), false)
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x26, int16(0), int32(0), true)
+					worldData := make([]byte, 4096+2048+2048+2048+256)
+					for i := 0; i < 4096; i++ {
+						if i >= 3840 {
+							worldData[i] = 2
+						} else {
+							worldData[i] = 3
+						}
+					}
+					var compressed bytes.Buffer
+
+					w := zlib.NewWriter(&compressed)
+					for x := -10; x <= 10; x++ {
+						for y := -10; y <= 10; y++ {
+							w.Write(worldData)
+						}
+					}
+					w.Close()
+					chunkData := []interface{}{int16(21 * 21), int32(compressed.Len()), true, compressed.Bytes()}
+					for x := -10; x <= 10; x++ {
+						for y := -10; y <= 10; y++ {
+							chunkData = append(chunkData, int32(x), int32(y), uint16(1), uint16(0))
+						}
+					}
+					protocol.WriteNewPacket(cc.ConnEncrypted, 0x26, chunkData...)
 					cc.HandleEncryptedConnection()
 					// protocol.WriteNewPacket(cc.ConnEncrypted, 0x00, protocol.CreateJsonMessage("Server will bbl", "blue"))
 					return
