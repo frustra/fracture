@@ -2,6 +2,7 @@ package entity
 
 import (
 	"log"
+	"math"
 	"net"
 	"strconv"
 
@@ -19,7 +20,10 @@ type Server struct {
 
 type PlayerEntity struct {
 	protobuf.Player
-	Conn *network.InternalConnection
+	LastX float64
+	LastY float64
+	LastZ float64
+	Conn  *network.InternalConnection
 }
 
 func (s *Server) Serve() error {
@@ -46,7 +50,10 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 					FeetY:    105 - 1.62,
 					Z:        0,
 				},
-				Conn: conn,
+				LastX: 0,
+				LastY: 105 - 1.62,
+				LastZ: 0,
+				Conn:  conn,
 			}
 
 			log.Printf("Player joined: %s", player.Username)
@@ -66,19 +73,17 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				}
 			}
 		case protobuf.PlayerAction_MOVE_ABSOLUTE:
-			responseType := protobuf.PlayerAction_MOVE_ABSOLUTE
+			responseType := protobuf.PlayerAction_MOVE_RELATIVE
 
 			tmp := s.Players[player.Uuid]
-			dx := player.X - tmp.X
-			dy := player.HeadY - tmp.HeadY
-			dz := player.Z - tmp.Z
-
-			tmp.X = player.X
-			tmp.HeadY = player.HeadY
-			tmp.FeetY = player.FeetY
-			tmp.Z = player.Z
-			tmp.Pitch = player.Pitch
-			tmp.Yaw = player.Yaw
+			if math.Abs(player.X-tmp.LastX) > 3 ||
+				math.Abs(player.FeetY-tmp.LastY) > 3 ||
+				math.Abs(player.Z-tmp.LastZ) > 3 {
+				responseType = protobuf.PlayerAction_MOVE_ABSOLUTE
+				tmp.LastX = player.X
+				tmp.LastY = player.FeetY
+				tmp.LastZ = player.Z
+			}
 
 			for uuid, p := range s.Players {
 				if uuid != player.Uuid {
@@ -94,9 +99,9 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 						sendPlayer.FeetY = player.FeetY
 						sendPlayer.Z = player.Z
 					} else {
-						sendPlayer.X = dx
-						sendPlayer.HeadY = dy
-						sendPlayer.Z = dz
+						sendPlayer.X = player.X - tmp.X
+						sendPlayer.FeetY = player.FeetY - tmp.FeetY
+						sendPlayer.Z = player.Z - tmp.Z
 					}
 					p.Conn.SendMessage(&protobuf.PlayerAction{
 						Player: &sendPlayer,
@@ -105,6 +110,13 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 					})
 				}
 			}
+
+			tmp.X = player.X
+			tmp.HeadY = player.HeadY
+			tmp.FeetY = player.FeetY
+			tmp.Z = player.Z
+			tmp.Pitch = player.Pitch
+			tmp.Yaw = player.Yaw
 		case protobuf.PlayerAction_LEAVE:
 			delete(s.Players, player.Uuid)
 

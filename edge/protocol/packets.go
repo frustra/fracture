@@ -18,6 +18,7 @@ const (
 	EntityLookID            = 0x16
 	EntityLookAndMoveID     = 0x17
 	EntityTeleportID        = 0x18
+	EntityHeadLookID        = 0x19
 	EntityMetadataID        = 0x1C
 	EntityPropertiesID      = 0x20
 	MapChunkBulkID          = 0x26

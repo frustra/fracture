@@ -47,7 +47,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 					msg.Player.Username,
 					protocol.Varint{0},
 					int32(msg.Player.X*32),
-					int32(msg.Player.HeadY*32),
+					int32(msg.Player.FeetY*32),
 					int32(msg.Player.Z*32),
 					byte(msg.Player.Yaw*256/2/math.Pi),
 					byte(msg.Player.Pitch*256/2/math.Pi),
@@ -73,29 +73,37 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID,
 					int32(msg.Player.EntityId),
 					int32(msg.Player.X*32),
-					int32(msg.Player.HeadY*32),
+					int32(msg.Player.FeetY*32),
 					int32(msg.Player.Z*32),
-					byte(msg.Player.Yaw*256/2/math.Pi),
-					byte(msg.Player.Pitch*256/2/math.Pi),
+					byte(msg.Player.Yaw*256/360),
+					byte(msg.Player.Pitch*256/360),
 				)
 			}
 		case protobuf.PlayerAction_MOVE_RELATIVE:
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityLookAndMoveID,
 				int32(msg.Player.EntityId),
 				byte(msg.Player.X*32),
-				byte(msg.Player.HeadY*32),
+				byte(msg.Player.FeetY*32),
 				byte(msg.Player.Z*32),
-				byte(msg.Player.Yaw*256/2/math.Pi),
-				byte(msg.Player.Pitch*256/2/math.Pi),
+				byte(msg.Player.Yaw*256/360),
+				byte(msg.Player.Pitch*256/360),
+			)
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID,
+				int32(msg.Player.EntityId),
+				byte(msg.Player.Yaw*256/360),
 			)
 		case protobuf.PlayerAction_MOVE_ABSOLUTE:
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID,
 				int32(msg.Player.EntityId),
 				int32(msg.Player.X*32),
-				int32(msg.Player.HeadY*32),
+				int32(msg.Player.FeetY*32),
 				int32(msg.Player.Z*32),
-				byte(msg.Player.Yaw*256/2/math.Pi),
-				byte(msg.Player.Pitch*256/2/math.Pi),
+				byte(msg.Player.Yaw*256/360),
+				byte(msg.Player.Pitch*256/360),
+			)
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID,
+				int32(msg.Player.EntityId),
+				byte(msg.Player.Yaw*256/360),
 			)
 		}
 	}
