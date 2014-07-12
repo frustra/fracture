@@ -1,0 +1,7 @@
+package protobuf;
+
+message BulkChunkRequest {
+	repeated int64 chunks_x = 1;
+	repeated int64 chunks_y = 2;
+}
+

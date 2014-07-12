@@ -1,0 +1,6 @@
+import "chunk_response.proto";
+package protobuf;
+
+message BulkChunkResponse {
+	repeated ChunkResponse chunks = 1;
+}

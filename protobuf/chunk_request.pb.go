@@ -2,18 +2,6 @@
 // source: chunk_request.proto
 // DO NOT EDIT!
 
-/*
-Package protobuf is a generated protocol buffer package.
-
-It is generated from these files:
-	chunk_request.proto
-	chunk_response.proto
-	internal_message.proto
-	node_meta.proto
-
-It has these top-level messages:
-	ChunkRequest
-*/
 package protobuf
 
 import proto "code.google.com/p/gogoprotobuf/proto"

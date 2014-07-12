@@ -16,9 +16,11 @@ var _ = &json.SyntaxError{}
 var _ = math.Inf
 
 type InternalMessage struct {
-	ChunkRequest     *ChunkRequest  `protobuf:"bytes,1,opt" json:"ChunkRequest,omitempty"`
-	ChunkResponse    *ChunkResponse `protobuf:"bytes,2,opt" json:"ChunkResponse,omitempty"`
-	XXX_unrecognized []byte         `json:"-"`
+	ChunkRequest      *ChunkRequest      `protobuf:"bytes,1,opt" json:"ChunkRequest,omitempty"`
+	ChunkResponse     *ChunkResponse     `protobuf:"bytes,2,opt" json:"ChunkResponse,omitempty"`
+	BulkChunkRequest  *BulkChunkRequest  `protobuf:"bytes,3,opt" json:"BulkChunkRequest,omitempty"`
+	BulkChunkResponse *BulkChunkResponse `protobuf:"bytes,4,opt" json:"BulkChunkResponse,omitempty"`
+	XXX_unrecognized  []byte             `json:"-"`
 }
 
 func (m *InternalMessage) Reset()         { *m = InternalMessage{} }
@@ -39,6 +41,20 @@ func (m *InternalMessage) GetChunkResponse() *ChunkResponse {
 	return nil
 }
 
+func (m *InternalMessage) GetBulkChunkRequest() *BulkChunkRequest {
+	if m != nil {
+		return m.BulkChunkRequest
+	}
+	return nil
+}
+
+func (m *InternalMessage) GetBulkChunkResponse() *BulkChunkResponse {
+	if m != nil {
+		return m.BulkChunkResponse
+	}
+	return nil
+}
+
 func init() {
 }
 func (this *InternalMessage) GetValue() interface{} {
@@ -47,6 +63,12 @@ func (this *InternalMessage) GetValue() interface{} {
 	}
 	if this.ChunkResponse != nil {
 		return this.ChunkResponse
+	}
+	if this.BulkChunkRequest != nil {
+		return this.BulkChunkRequest
+	}
+	if this.BulkChunkResponse != nil {
+		return this.BulkChunkResponse
 	}
 	return nil
 }
@@ -57,6 +79,10 @@ func (this *InternalMessage) SetValue(value interface{}) bool {
 		this.ChunkRequest = vt
 	case *ChunkResponse:
 		this.ChunkResponse = vt
+	case *BulkChunkRequest:
+		this.BulkChunkRequest = vt
+	case *BulkChunkResponse:
+		this.BulkChunkResponse = vt
 	default:
 		return false
 	}
