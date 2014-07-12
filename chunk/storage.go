@@ -30,12 +30,12 @@ func NewChunk(offsetX, offsetZ int64) *Chunk {
 	return c
 }
 
-func (c *Chunk) Set(x, y, z uint8, val byte) {
-	c.BlockTypes[y*BlockZSize+z*BlockXSize+x] = val
+func (c *Chunk) Set(x, y, z int, val byte) {
+	c.BlockTypes[y*BlockZSize*BlockXSize+z*BlockXSize+x] = val
 }
 
-func (c *Chunk) Get(x, y, z uint8) byte {
-	return c.BlockTypes[y*BlockZSize+z*BlockXSize+x]
+func (c *Chunk) Get(x, y, z int) byte {
+	return c.BlockTypes[y*BlockZSize*BlockXSize+z*BlockXSize+x]
 }
 
 func (c *Chunk) Clear() {
@@ -45,9 +45,9 @@ func (c *Chunk) Clear() {
 }
 
 func (c *Chunk) Generate() {
-	for y := uint8(0); y < BlockYSize; y++ {
-		for z := uint8(0); z < BlockZSize; z++ {
-			for x := uint8(0); x < BlockXSize; x++ {
+	for y := 0; y < BlockYSize*BlockHeight; y++ {
+		for z := 0; z < BlockZSize; z++ {
+			for x := 0; x < BlockXSize; x++ {
 				if y < 100 {
 					c.Set(x, y, z, 3)
 				} else if y == 100 {
@@ -58,7 +58,7 @@ func (c *Chunk) Generate() {
 	}
 }
 
-func (c *Chunk) Cube(y uint8) []byte {
+func (c *Chunk) Cube(y int) []byte {
 	start := y * BlockZSize * BlockXSize
 	end := (y + 1) * BlockZSize * BlockXSize
 	return c.BlockTypes[start:end]
@@ -78,7 +78,7 @@ func (c *Chunk) UnmarshallCompressed(buf []byte) error {
 		return err
 	}
 
-	b := bytes.NewBuffer(c.BlockTypes[:])
+	b := bytes.NewBuffer(c.BlockTypes[0:0])
 	_, err = io.Copy(b, w)
 	return err
 }
