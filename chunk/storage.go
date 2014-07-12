@@ -42,14 +42,14 @@ func (c *Chunk) Clear() {
 	}
 }
 
-func (c *Chunk) Generate() {
+func (c *Chunk) Generate(blockType byte) {
 	for y := 0; y < BlockYSize*BlockHeight; y++ {
 		for z := 0; z < BlockZSize; z++ {
 			for x := 0; x < BlockXSize; x++ {
 				if y < 100 {
 					c.Set(x, y, z, 3)
 				} else if y == 100 {
-					c.Set(x, y, z, 2)
+					c.Set(x, y, z, blockType)
 				}
 			}
 		}

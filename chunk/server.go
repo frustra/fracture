@@ -24,10 +24,13 @@ type Server struct {
 
 func (s *Server) Serve() error {
 	log.Printf("Chunk server (%d, %d) loading on %s\n", s.OffsetX, s.OffsetZ, s.Addr)
+
+	blockType := byte(((s.OffsetX+8)/8+(s.OffsetZ+8)/4)%4 + 1)
+
 	for z := int64(0); z < ChunkWidthPerNode; z++ {
 		for x := int64(0); x < ChunkWidthPerNode; x++ {
 			c := NewChunk(s.OffsetX+x, s.OffsetZ+z)
-			c.Generate()
+			c.Generate(blockType)
 			s.Storage[z][x] = c
 		}
 	}
