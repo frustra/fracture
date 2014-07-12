@@ -18,13 +18,14 @@ var _ = math.Inf
 type Player struct {
 	Uuid             string  `protobuf:"bytes,1,req,name=uuid" json:"uuid"`
 	Username         string  `protobuf:"bytes,2,opt,name=username" json:"username"`
-	X                float64 `protobuf:"fixed64,3,opt,name=x" json:"x"`
-	HeadY            float64 `protobuf:"fixed64,4,opt,name=headY" json:"headY"`
-	FeetY            float64 `protobuf:"fixed64,5,opt,name=feetY" json:"feetY"`
-	Z                float64 `protobuf:"fixed64,6,opt,name=z" json:"z"`
-	OnGround         bool    `protobuf:"varint,7,opt,name=onGround" json:"onGround"`
-	Pitch            float32 `protobuf:"fixed32,8,opt,name=pitch" json:"pitch"`
-	Yaw              float32 `protobuf:"fixed32,9,opt,name=yaw" json:"yaw"`
+	EntityId         int64   `protobuf:"varint,3,opt,name=entityId" json:"entityId"`
+	X                float64 `protobuf:"fixed64,4,opt,name=x" json:"x"`
+	HeadY            float64 `protobuf:"fixed64,5,opt,name=headY" json:"headY"`
+	FeetY            float64 `protobuf:"fixed64,6,opt,name=feetY" json:"feetY"`
+	Z                float64 `protobuf:"fixed64,7,opt,name=z" json:"z"`
+	OnGround         bool    `protobuf:"varint,8,opt,name=onGround" json:"onGround"`
+	Pitch            float32 `protobuf:"fixed32,9,opt,name=pitch" json:"pitch"`
+	Yaw              float32 `protobuf:"fixed32,10,opt,name=yaw" json:"yaw"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -44,6 +45,13 @@ func (m *Player) GetUsername() string {
 		return m.Username
 	}
 	return ""
+}
+
+func (m *Player) GetEntityId() int64 {
+	if m != nil {
+		return m.EntityId
+	}
+	return 0
 }
 
 func (m *Player) GetX() float64 {

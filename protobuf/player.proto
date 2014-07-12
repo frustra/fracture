@@ -5,11 +5,12 @@ import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
 message Player {
 	required string uuid = 1 [(gogoproto.nullable) = false];
 	optional string username = 2 [(gogoproto.nullable) = false];
-	optional double x = 3 [(gogoproto.nullable) = false];
-	optional double headY = 4 [(gogoproto.nullable) = false];
-	optional double feetY = 5 [(gogoproto.nullable) = false];
-	optional double z = 6 [(gogoproto.nullable) = false];
-	optional bool onGround = 7 [(gogoproto.nullable) = false];
-	optional float pitch = 8 [(gogoproto.nullable) = false];
-	optional float yaw = 9 [(gogoproto.nullable) = false];
+	optional int64 entityId = 3 [(gogoproto.nullable) = false];
+	optional double x = 4 [(gogoproto.nullable) = false];
+	optional double headY = 5 [(gogoproto.nullable) = false];
+	optional double feetY = 6 [(gogoproto.nullable) = false];
+	optional double z = 7 [(gogoproto.nullable) = false];
+	optional bool onGround = 8 [(gogoproto.nullable) = false];
+	optional float pitch = 9 [(gogoproto.nullable) = false];
+	optional float yaw = 10 [(gogoproto.nullable) = false];
 }

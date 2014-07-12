@@ -34,6 +34,16 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 	switch msg := message.(type) {
 	case *protobuf.ChunkResponse:
 		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.MapChunkBulkID, int16(1), int32(len(msg.Data)), true, msg.Data, int32(msg.X), int32(msg.Z), uint16(0xFFFF), uint16(0))
+	case *protobuf.PlayerAction:
+		switch msg.Action {
+		case protobuf.PlayerAction_JOIN:
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.PlayerListItemID, msg.Player.Username, true, int16(0))
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(msg.Player.Username+" joined the game", "yellow"))
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.SpawnPlayerID, protocol.Varint{msg.Player.EntityId}, msg.Player.Uuid, msg.Player.Username, protocol.Varint{0}, int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch), int16(0), uint8(127))
+		case protobuf.PlayerAction_MOVE:
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.PlayerListItemID, msg.Player.Username, true, int16(0))
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(msg.Player.Username+" joined the game", "yellow"))
+		}
 	}
 }
 

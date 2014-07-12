@@ -11,4 +11,5 @@ message PlayerAction {
 	}
 	required Player player = 1;
 	required Action action = 2 [(gogoproto.nullable) = false];
+	optional string uuid = 3 [(gogoproto.nullable) = false];
 }

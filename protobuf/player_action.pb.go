@@ -54,6 +54,7 @@ func (x *PlayerAction_Action) UnmarshalJSON(data []byte) error {
 type PlayerAction struct {
 	Player           *Player             `protobuf:"bytes,1,req,name=player" json:"player,omitempty"`
 	Action           PlayerAction_Action `protobuf:"varint,2,req,name=action,enum=protobuf.PlayerAction_Action" json:"action"`
+	Uuid             string              `protobuf:"bytes,3,opt,name=uuid" json:"uuid"`
 	XXX_unrecognized []byte              `json:"-"`
 }
 
@@ -73,6 +74,13 @@ func (m *PlayerAction) GetAction() PlayerAction_Action {
 		return m.Action
 	}
 	return PlayerAction_JOIN
+}
+
+func (m *PlayerAction) GetUuid() string {
+	if m != nil {
+		return m.Uuid
+	}
+	return ""
 }
 
 func init() {

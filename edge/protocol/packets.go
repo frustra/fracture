@@ -14,6 +14,7 @@ const (
 	ChatMessageID           = 0x02
 	SpawnPositionID         = 0x05
 	PlayerPositionAndLookID = 0x08
+	SpawnPlayerID           = 0x0C
 	MapChunkBulkID          = 0x26
 	PlayerListItemID        = 0x38
 	PlayerAbilitiesID       = 0x39
@@ -37,11 +38,11 @@ type RawPacket struct {
 }
 
 type Varint struct {
-	val int64
+	Val int64
 }
 
 type Uvarint struct {
-	val uint64
+	Val uint64
 }
 
 type Serializable interface {
@@ -50,13 +51,13 @@ type Serializable interface {
 
 func (v Varint) Bytes() []byte {
 	buf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(buf, v.val)
+	n := binary.PutVarint(buf, v.Val)
 	return buf[0:n]
 }
 
 func (v Uvarint) Bytes() []byte {
 	buf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutUvarint(buf, v.val)
+	n := binary.PutUvarint(buf, v.Val)
 	return buf[0:n]
 }
 

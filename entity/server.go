@@ -40,6 +40,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				Player: protobuf.Player{
 					Uuid:     player.Uuid,
 					Username: player.Username,
+					EntityId: player.EntityId,
 					X:        0,
 					HeadY:    128,
 					FeetY:    128 - 1.62,
@@ -50,10 +51,11 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 
 			log.Printf("Player joined: %s", player.Username)
 
-			for _, p := range s.Players {
+			for uuid, p := range s.Players {
 				p.Conn.SendMessage(&protobuf.PlayerAction{
 					Player: &s.Players[player.Uuid].Player,
 					Action: protobuf.PlayerAction_JOIN,
+					Uuid:   uuid,
 				})
 			}
 		case protobuf.PlayerAction_MOVE:
@@ -69,15 +71,17 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				if uuid != player.Uuid {
 					p.Conn.SendMessage(&protobuf.PlayerAction{
 						Player: &protobuf.Player{
-							Uuid:  player.Uuid,
-							X:     player.X,
-							HeadY: player.HeadY,
-							FeetY: player.FeetY,
-							Z:     player.Z,
-							Pitch: player.Pitch,
-							Yaw:   player.Yaw,
+							Uuid:     player.Uuid,
+							EntityId: player.EntityId,
+							X:        player.X,
+							HeadY:    player.HeadY,
+							FeetY:    player.FeetY,
+							Z:        player.Z,
+							Pitch:    player.Pitch,
+							Yaw:      player.Yaw,
 						},
 						Action: protobuf.PlayerAction_MOVE,
+						Uuid:   uuid,
 					})
 				}
 			}
@@ -86,10 +90,11 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 
 			log.Printf("Player left: %s", player.Username)
 
-			for _, p := range s.Players {
+			for uuid, p := range s.Players {
 				p.Conn.SendMessage(&protobuf.PlayerAction{
 					Player: &protobuf.Player{Uuid: player.Uuid},
 					Action: protobuf.PlayerAction_LEAVE,
+					Uuid:   uuid,
 				})
 			}
 		}
