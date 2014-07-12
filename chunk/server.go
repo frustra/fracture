@@ -33,7 +33,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 		res := &protobuf.ChunkResponse{
 			X:    &x,
 			Z:    &z,
-			Data: make([]byte, 0),
+			Data: s.Storage.MarshallCompressed(),
 		}
 
 		conn.SendMessage(res)

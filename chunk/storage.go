@@ -1,6 +1,10 @@
 package chunk
 
-import ()
+import (
+	"bytes"
+	"compress/zlib"
+	"io"
+)
 
 const (
 	BlockHeight    = 16 // Subchunks per chunk
@@ -58,4 +62,27 @@ func (c *Chunk) Cube(y uint8) []byte {
 	start := y * BlockZSize * BlockXSize
 	end := (y + 1) * BlockZSize * BlockXSize
 	return c.BlockTypes[start:end]
+}
+
+func (c *Chunk) MarshallCompressed() []byte {
+	var compressed bytes.Buffer
+	w := zlib.NewWriter(&compressed)
+	c.WriteTo(w)
+	w.Close()
+	return compressed.Bytes()
+}
+
+func (c *Chunk) UnmarshallCompressed(buf []byte) error {
+	w, err := zlib.NewReader(bytes.NewReader(buf))
+	if err != nil {
+		return err
+	}
+
+	b := bytes.NewBuffer(c.BlockTypes[:])
+	_, err = io.Copy(b, w)
+	return err
+}
+
+func (c *Chunk) WriteTo(w io.Writer) (int, error) {
+	return w.Write(c.BlockTypes[:])
 }
