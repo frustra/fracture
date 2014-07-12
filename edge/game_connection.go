@@ -28,7 +28,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 	cc.EntityServer, err = cc.Server.FindEntityServer(cc.Player)
 	if err != nil {
 		log.Printf("Failed to connect to entity server: %s", err)
-		protocol.WriteNewPacket(cc.ConnEncrypted, 0x40, protocol.CreateJsonMessage("Failed to connect to entity server!", ""))
+		protocol.WriteNewPacket(cc.ConnEncrypted, protocol.DisconnectID, protocol.CreateJsonMessage("Failed to connect to entity server!", ""))
 		return
 	}
 	cc.EntityServer.SendMessage(&protobuf.PlayerAction{
@@ -38,15 +38,15 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 	defer func() {
 		for client, _ := range cc.Server.Clients {
 			if client.EntityServer != nil {
-				protocol.WriteNewPacket(client.ConnEncrypted, 0x38, cc.Player.Username, false, int16(0))
-				protocol.WriteNewPacket(client.ConnEncrypted, 0x02, protocol.CreateJsonMessage(cc.Player.Username+" left the game", "yellow"))
+				protocol.WriteNewPacket(client.ConnEncrypted, protocol.PlayerListItemID, cc.Player.Username, false, int16(0))
+				protocol.WriteNewPacket(client.ConnEncrypted, protocol.ChatMessageID, protocol.CreateJsonMessage(cc.Player.Username+" left the game", "yellow"))
 			}
 		}
 	}()
 	go func() {
 		for cc.EntityServer != nil {
 			time.Sleep(1 * time.Second)
-			protocol.WriteNewPacket(cc.ConnEncrypted, 0x00, int32(time.Now().Nanosecond()))
+			protocol.WriteNewPacket(cc.ConnEncrypted, protocol.KeepAliveID, int32(time.Now().Nanosecond()))
 		}
 	}()
 	for cc.EntityServer != nil {
@@ -62,7 +62,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			if len(message) > 0 && message[0] != '/' {
 				for client, _ := range cc.Server.Clients {
 					if client.EntityServer != nil {
-						protocol.WriteNewPacket(client.ConnEncrypted, 0x02, protocol.CreateJsonMessage("<"+cc.Player.Username+"> "+message, ""))
+						protocol.WriteNewPacket(client.ConnEncrypted, protocol.ChatMessageID, protocol.CreateJsonMessage("<"+cc.Player.Username+"> "+message, ""))
 					}
 				}
 			}
@@ -93,10 +93,10 @@ func (cc *GameConnection) HandleConnection() {
 			}
 		} else {
 			switch id {
-			case 0x00:
+			case 0x00: // Handshake, Status Request, Login Start
 				if state == 1 {
 					log.Printf("Server pinged from: %s", remoteAddr)
-					protocol.WriteNewPacket(cc.Conn, 0x00, protocol.CreateStatusResponse("1.7.10", 5, 0, cc.Server.Size, protocol.CreateJsonMessage("Fracture Distributed Server", "green")))
+					protocol.WriteNewPacket(cc.Conn, protocol.StatusResponseID, protocol.CreateStatusResponse("1.7.10", 5, 0, cc.Server.Size, protocol.CreateJsonMessage("Fracture Distributed Server", "green")))
 				} else if state == 2 {
 					cc.Player.Username, _ = protocol.ReadString(buf, 0)
 					log.Printf("Got connection from %s", cc.Player.Username)
@@ -104,7 +104,7 @@ func (cc *GameConnection) HandleConnection() {
 
 					pubKey := cc.Server.keyPair.Serialize()
 					verifyToken = protocol.GenerateKey(16)
-					protocol.WriteNewPacket(cc.Conn, 0x01, "", int16(len(pubKey)), pubKey, int16(len(verifyToken)), verifyToken)
+					protocol.WriteNewPacket(cc.Conn, protocol.EncryptionRequestID, "", int16(len(pubKey)), pubKey, int16(len(verifyToken)), verifyToken)
 				} else {
 					_, n := protocol.ReadUvarint(buf, 0) // version
 					_, n = protocol.ReadString(buf, n)   // address
@@ -112,7 +112,7 @@ func (cc *GameConnection) HandleConnection() {
 					nextstate, n := protocol.ReadUvarint(buf, n)
 					state = int(nextstate)
 				}
-			case 0x01:
+			case 0x01: // Encryption Response, Ping Request
 				if state == 2 {
 					secretLen, n := protocol.ReadShort(buf, 0)
 					secretEncrypted, n := protocol.ReadBytes(buf, n, secretLen)
@@ -141,14 +141,14 @@ func (cc *GameConnection) HandleConnection() {
 					cc.Player.Uuid, err = protocol.CheckAuth(cc.Player.Username, "", cc.Server.keyPair, sharedSecret)
 					if err != nil {
 						log.Printf("Failed to verify username %s: %s", cc.Player.Username, err)
-						protocol.WriteNewPacket(cc.ConnEncrypted, 0x00, protocol.CreateJsonMessage("Failed to verify username!", ""))
+						protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PreAuthKickID, protocol.CreateJsonMessage("Failed to verify username!", ""))
 						return
 					}
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x02, cc.Player.Uuid, cc.Player.Username)
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x01, int32(1), uint8(0), byte(0), uint8(1), uint8(cc.Server.Size), "default")
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x05, int32(0), int32(0), int32(0))
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x39, byte(1), float32(5), float32(5))
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x08, float64(0), float64(128), float64(0), float32(0), float32(0), false)
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.LoginSuccessID, cc.Player.Uuid, cc.Player.Username)
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.JoinGameID, int32(1), uint8(0), byte(0), uint8(1), uint8(cc.Server.Size), "default")
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.SpawnPositionID, int32(0), int32(0), int32(0))
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerAbilitiesID, byte(1), float32(5), float32(5))
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerPositionAndLookID, float64(0), float64(128), float64(0), float32(0), float32(0), false)
 					worldData := make([]byte, 4096+2048+2048+2048+256)
 					for i := 0; i < 4096; i++ {
 						if i >= 3840 {
@@ -172,14 +172,14 @@ func (cc *GameConnection) HandleConnection() {
 							chunkData = append(chunkData, int32(x), int32(y), uint16(1), uint16(0))
 						}
 					}
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x26, chunkData...)
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.MapChunkBulkID, chunkData...)
 					cc.HandleEncryptedConnection()
-					// protocol.WriteNewPacket(cc.ConnEncrypted, 0x00, protocol.CreateJsonMessage("Server will bbl", "blue"))
+					// protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PreAuthKickID, protocol.CreateJsonMessage("Server will bbl", "blue"))
 					return
 				} else {
 					time, _ := protocol.ReadLong(buf, 0)
 					//fmt.Printf("Ping: %d\n", time)
-					protocol.WriteNewPacket(cc.Conn, 0x01, time)
+					protocol.WriteNewPacket(cc.Conn, protocol.PingResponseID, time)
 				}
 			default:
 				log.Printf("Unknown Packet (state:%d): 0x%X : %s", state, id, hex.Dump(buf))

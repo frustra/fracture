@@ -8,6 +8,24 @@ import (
 	"reflect"
 )
 
+const (
+	KeepAliveID             = 0x00
+	JoinGameID              = 0x01
+	ChatMessageID           = 0x02
+	SpawnPositionID         = 0x05
+	PlayerPositionAndLookID = 0x08
+	MapChunkBulkID          = 0x26
+	PlayerListItemID        = 0x38
+	PlayerAbilitiesID       = 0x39
+	DisconnectID            = 0x40
+
+	PreAuthKickID       = 0x00
+	StatusResponseID    = 0x00
+	PingResponseID      = 0x01
+	EncryptionRequestID = 0x01
+	LoginSuccessID      = 0x02
+)
+
 type Packet struct {
 	Id     uint64
 	Fields []interface{}

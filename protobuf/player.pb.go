@@ -17,10 +17,14 @@ var _ = math.Inf
 
 type Player struct {
 	Uuid             string  `protobuf:"bytes,1,req,name=uuid" json:"uuid"`
-	Username         string  `protobuf:"bytes,2,req,name=username" json:"username"`
-	X                float64 `protobuf:"fixed64,3,req,name=x" json:"x"`
-	Y                float64 `protobuf:"fixed64,4,req,name=y" json:"y"`
-	Z                float64 `protobuf:"fixed64,5,req,name=z" json:"z"`
+	Username         string  `protobuf:"bytes,2,opt,name=username" json:"username"`
+	X                float64 `protobuf:"fixed64,3,opt,name=x" json:"x"`
+	HeadY            float64 `protobuf:"fixed64,4,opt,name=headY" json:"headY"`
+	FeetY            float64 `protobuf:"fixed64,5,opt,name=feetY" json:"feetY"`
+	Z                float64 `protobuf:"fixed64,6,opt,name=z" json:"z"`
+	OnGround         bool    `protobuf:"varint,7,opt,name=onGround" json:"onGround"`
+	Pitch            float32 `protobuf:"fixed32,8,opt,name=pitch" json:"pitch"`
+	Yaw              float32 `protobuf:"fixed32,9,opt,name=yaw" json:"yaw"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -49,9 +53,16 @@ func (m *Player) GetX() float64 {
 	return 0
 }
 
-func (m *Player) GetY() float64 {
+func (m *Player) GetHeadY() float64 {
 	if m != nil {
-		return m.Y
+		return m.HeadY
+	}
+	return 0
+}
+
+func (m *Player) GetFeetY() float64 {
+	if m != nil {
+		return m.FeetY
 	}
 	return 0
 }
@@ -59,6 +70,27 @@ func (m *Player) GetY() float64 {
 func (m *Player) GetZ() float64 {
 	if m != nil {
 		return m.Z
+	}
+	return 0
+}
+
+func (m *Player) GetOnGround() bool {
+	if m != nil {
+		return m.OnGround
+	}
+	return false
+}
+
+func (m *Player) GetPitch() float32 {
+	if m != nil {
+		return m.Pitch
+	}
+	return 0
+}
+
+func (m *Player) GetYaw() float32 {
+	if m != nil {
+		return m.Yaw
 	}
 	return 0
 }
