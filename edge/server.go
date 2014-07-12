@@ -108,15 +108,21 @@ func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalCon
 
 func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error) {
 	x, z = chunk.ChunkCoordsToNode(x, z)
+	coord := ChunkCoord{x, z}
 
-	if conn, exists := s.ChunkServers[ChunkCoord{x, z}]; exists {
+	if conn, exists := s.ChunkServers[coord]; exists {
 		return conn, nil
 	}
 
 	chunkServers := s.Cluster.MetaLookup["chunk"]
 	for _, meta := range chunkServers {
 		if *meta.X == x && *meta.Z == z {
-			return network.ConnectInternal(meta.GetAddr(), s)
+			conn, err := network.ConnectInternal(meta.GetAddr(), s)
+			if err != nil {
+				return nil, err
+			}
+			s.ChunkCoord[coord] = conn
+			return conn, nil
 		}
 	}
 	return nil, errors.New("No chunk server for this area!")
