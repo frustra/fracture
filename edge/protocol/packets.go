@@ -15,6 +15,7 @@ const (
 	SpawnPositionID         = 0x05
 	PlayerPositionAndLookID = 0x08
 	SpawnPlayerID           = 0x0C
+	EntityTeleportID        = 0x18
 	MapChunkBulkID          = 0x26
 	PlayerListItemID        = 0x38
 	PlayerAbilitiesID       = 0x39
