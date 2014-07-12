@@ -40,7 +40,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.PlayerListItemID, msg.Player.Username, true, int16(0))
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(msg.Player.Username+" joined the game", "yellow"))
 			if msg.Uuid != msg.Player.Uuid {
-				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.SpawnPlayerID, protocol.Varint{msg.Player.EntityId}, msg.Player.Uuid, msg.Player.Username, protocol.Varint{0}, int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch), int16(0), uint8(127))
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.SpawnPlayerID, protocol.Varint{msg.Player.EntityId}, msg.Player.Uuid, msg.Player.Username, protocol.Varint{0}, int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch), int16(0), []byte{0x9, 100, 127})
 			}
 		case protobuf.PlayerAction_MOVE:
 			if msg.Uuid != msg.Player.Uuid {
