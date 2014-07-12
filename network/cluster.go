@@ -104,12 +104,12 @@ func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 	}
 	typeMap[n.Name] = meta
 
-	metaHost, metaPortString, err := net.SplitHostPort(meta.GetAddr())
+	metaHost, _, err := net.SplitHostPort(meta.GetAddr())
 	if metaHost == "" {
 		metaHost = n.Addr.String()
 	}
 
-	log.Printf("%s %s:%s [%s] joined from %s:%d", meta.GetType(), metaHost, metaPortString, n.Name, n.Addr, n.Port)
+	// log.Printf("%s %s:%s [%s] joined from %s:%d", meta.GetType(), metaHost, metaPortString, n.Name, n.Addr, n.Port)
 }
 
 func (c *Cluster) NotifyLeave(n *memberlist.Node) {
@@ -119,7 +119,7 @@ func (c *Cluster) NotifyLeave(n *memberlist.Node) {
 	}
 	delete(c.TypeLookup, n.Name)
 
-	log.Printf("%s left", n.Name)
+	// log.Printf("%s left", n.Name)
 }
 
 func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
