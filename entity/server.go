@@ -124,7 +124,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 
 			for uuid, p := range s.Players {
 				p.Conn.SendMessage(&protobuf.PlayerAction{
-					Player: &protobuf.Player{Uuid: player.Uuid},
+					Player: &protobuf.Player{Uuid: player.Uuid, Username: player.Username, EntityId: player.EntityId},
 					Action: protobuf.PlayerAction_LEAVE,
 					Uuid:   uuid,
 				})

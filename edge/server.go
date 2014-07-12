@@ -88,10 +88,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				byte(msg.Player.Yaw*256/360),
 				byte(msg.Player.Pitch*256/360),
 			)
-			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID,
-				int32(msg.Player.EntityId),
-				byte(msg.Player.Yaw*256/360),
-			)
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID, int32(msg.Player.EntityId), byte(msg.Player.Yaw*256/360))
 		case protobuf.PlayerAction_MOVE_ABSOLUTE:
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID,
 				int32(msg.Player.EntityId),
@@ -101,10 +98,11 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				byte(msg.Player.Yaw*256/360),
 				byte(msg.Player.Pitch*256/360),
 			)
-			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID,
-				int32(msg.Player.EntityId),
-				byte(msg.Player.Yaw*256/360),
-			)
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID, int32(msg.Player.EntityId), byte(msg.Player.Yaw*256/360))
+		case protobuf.PlayerAction_LEAVE:
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.DestroyEntitiesID, byte(1), int32(msg.Player.EntityId))
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.PlayerListItemID, msg.Player.Username, false, int16(0))
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(msg.Player.Username+" left the game", "yellow"))
 		}
 	}
 }

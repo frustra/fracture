@@ -15,6 +15,7 @@ const (
 	SpawnPositionID         = 0x05
 	PlayerPositionAndLookID = 0x08
 	SpawnPlayerID           = 0x0C
+	DestroyEntitiesID       = 0x13
 	EntityLookID            = 0x16
 	EntityLookAndMoveID     = 0x17
 	EntityTeleportID        = 0x18

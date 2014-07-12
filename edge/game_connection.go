@@ -24,12 +24,10 @@ type GameConnection struct {
 
 func (cc *GameConnection) HandleEncryptedConnection() {
 	defer func() {
-		for uuid, conn := range cc.Server.PlayerConnections {
-			if uuid != cc.Player.Uuid {
-				conn <- protocol.CreatePacket(protocol.PlayerListItemID, cc.Player.Username, false, int16(0))
-				conn <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(cc.Player.Username+" left the game", "yellow"))
-			}
-		}
+		cc.EntityServer.SendMessage(&protobuf.PlayerAction{
+			Player: cc.Player,
+			Action: protobuf.PlayerAction_LEAVE,
+		})
 	}()
 	go func() {
 		for cc.EntityServer != nil {
