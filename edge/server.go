@@ -43,9 +43,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.SpawnPlayerID, protocol.Varint{msg.Player.EntityId}, msg.Player.Uuid, msg.Player.Username, protocol.Varint{0}, int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch), int16(0), []byte{0x0, 0, 0x9, 0, 0x66}, float32(100), uint8(127))
 			}
 		case protobuf.PlayerAction_MOVE:
-			if msg.Uuid != msg.Player.Uuid {
-				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID, int32(msg.Player.EntityId), int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch))
-			}
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID, int32(msg.Player.EntityId), int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch))
 		}
 	}
 }
