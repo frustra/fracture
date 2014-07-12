@@ -282,6 +282,21 @@ func ReadLong(buf []byte, start int) (int64, int) {
 	return val, start + 8
 }
 
+func ReadFloat(buf []byte, start int) (float32, int) {
+	val, _ := ReadInt(buf, start)
+	return math.Float32frombits(uint32(val)), start + 4
+}
+
+func ReadDouble(buf []byte, start int) (float64, int) {
+	val, _ := ReadLong(buf, start)
+	return math.Float64frombits(uint64(val)), start + 4
+}
+
+func ReadBool(buf []byte, start int) (bool, int) {
+	val, _ := ReadByte(buf, start)
+	return val != 0, start + 1
+}
+
 func ReadVarint(buf []byte, start int) (int64, int) {
 	if start < 0 || start >= len(buf) {
 		return 0, -1

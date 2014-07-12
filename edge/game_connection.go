@@ -52,6 +52,42 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 					conn <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage("<"+cc.Player.Username+"> "+message, ""))
 				}
 			}
+		} else if id == 0x04 {
+			var start int = 0
+			cc.Player.X, start = protocol.ReadDouble(buf, 0)
+			cc.Player.FeetY, start = protocol.ReadDouble(buf, start)
+			cc.Player.HeadY, start = protocol.ReadDouble(buf, start)
+			cc.Player.Z, start = protocol.ReadDouble(buf, start)
+			cc.Player.OnGround, start = protocol.ReadBool(buf, start)
+
+			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
+				Player: cc.Player,
+				Action: protobuf.PlayerAction_MOVE,
+			})
+		} else if id == 0x05 {
+			var start int = 0
+			cc.Player.Yaw, start = protocol.ReadFloat(buf, 0)
+			cc.Player.Pitch, start = protocol.ReadFloat(buf, start)
+			cc.Player.OnGround, start = protocol.ReadBool(buf, start)
+
+			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
+				Player: cc.Player,
+				Action: protobuf.PlayerAction_MOVE,
+			})
+		} else if id == 0x06 {
+			var start int = 0
+			cc.Player.X, start = protocol.ReadDouble(buf, 0)
+			cc.Player.FeetY, start = protocol.ReadDouble(buf, start)
+			cc.Player.HeadY, start = protocol.ReadDouble(buf, start)
+			cc.Player.Z, start = protocol.ReadDouble(buf, start)
+			cc.Player.Yaw, start = protocol.ReadFloat(buf, 0)
+			cc.Player.Pitch, start = protocol.ReadFloat(buf, start)
+			cc.Player.OnGround, start = protocol.ReadBool(buf, start)
+
+			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
+				Player: cc.Player,
+				Action: protobuf.PlayerAction_MOVE,
+			})
 		}
 	}
 }
