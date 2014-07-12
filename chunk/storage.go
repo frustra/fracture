@@ -66,6 +66,14 @@ func (c *Chunk) MarshallCompressed() []byte {
 	var compressed bytes.Buffer
 	w := zlib.NewWriter(&compressed)
 	c.WriteTo(w)
+	meta := make([]byte, 16*16*16*16/2)
+	w.Write(meta)
+	light := make([]byte, 16*16*16*16/2)
+	for i := 0; i < len(light); i++ {
+		light[i] = 15 | 15<<4
+	}
+	w.Write(light)
+	w.Write(light)
 	w.Close()
 	return compressed.Bytes()
 }
