@@ -3,4 +3,6 @@ package protobuf;
 message NodeMeta {
 	required string addr = 1;
 	required string type = 2;
+	optional int64 x = 3;
+	optional int64 y = 4;
 }

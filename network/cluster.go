@@ -34,8 +34,10 @@ func CreateCluster(addr, existing string) (*Cluster, error) {
 	}
 
 	c := &Cluster{
-		config:   config,
-		existing: existing,
+		config:     config,
+		existing:   existing,
+		MetaLookup: make(map[string]map[string]*protobuf.NodeMeta),
+		TypeLookup: make(map[string]string),
 	}
 
 	config.Delegate = c
@@ -54,6 +56,9 @@ type Cluster struct {
 
 	NodeType, NodeAddr string
 	nodeMeta           []byte
+
+	MetaLookup map[string]map[string]*protobuf.NodeMeta
+	TypeLookup map[string]string
 }
 
 func (c *Cluster) Name() string {
@@ -95,6 +100,13 @@ func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 		log.Print("error unmarshalling node metadata: ", err)
 	}
 
+	c.TypeLookup[n.Name] = meta.GetType()
+	typeMap, ok := c.MetaLookup[meta.GetType()]
+	if !ok {
+		typeMap, c.MetaLookup[meta.GetType()] = make(map[string]*protobuf.NodeMeta)
+	}
+	typeMap[n.Name] = meta
+
 	metaHost, metaPortString, err := net.SplitHostPort(meta.GetAddr())
 	if metaHost == "" {
 		metaHost = n.Addr.String()
@@ -104,11 +116,18 @@ func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 }
 
 func (c *Cluster) NotifyLeave(n *memberlist.Node) {
+	typeMap, ok := c.MetaLookup[meta.GetType()]
+	if ok {
+		delete(typeMap, n.Name)
+	}
+	delete(c.TypeLookup, n.Name)
+
 	log.Printf("%s left", n.Name)
 }
 
 func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
-
+	typeMap := c.MetaLookup[c.TypeLookup[n.Name]]
+	typeMap[n.Name] = meta
 }
 
 func (c *Cluster) NodeMeta(limit int) []byte {

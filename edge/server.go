@@ -2,6 +2,7 @@ package edge
 
 import (
 	"log"
+	"math/rand"
 	"net"
 
 	"github.com/frustra/fracture/edge/protocol"
@@ -53,4 +54,32 @@ func (s *Server) NodeType() string {
 
 func (s *Server) NodePort() int {
 	return 1234
+}
+func (s *Server) FindEntityServer(x float64) string {
+	var minPlayer *GameConnection // One player right of x
+	var maxPlayer *GameConnection // One player left of x
+	for client, _ := range s.Clients {
+		if client.Connected {
+			if client.X >= x {
+				if minPlayer == nil || minPlayer.X < client.X {
+					minPlayer = client
+				}
+			}
+			if client.X <= x {
+				if maxPlayer == nil || maxPlayer.X > client.X {
+					maxPlayer = client
+				}
+			}
+		}
+	}
+	entityServers := s.Cluster.MetaLookup["entity"]
+	serverRange := make([]string, len(entityServers))
+	i := 0
+	for _, meta := range entityServers {
+		if meta.GetX() >= maxPlayer.ServerId && meta.GetX() <= minPlayer.ServerId {
+			serverRange[i] = meta.GetAddr()
+			i++
+		}
+	}
+	return serverRange[rand.Intn(i)]
 }

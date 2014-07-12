@@ -19,13 +19,15 @@ type GameConnection struct {
 	Connected     bool
 
 	Username string
+	X        float64
+	ServerId int64
 }
 
 func (cc *GameConnection) HandleEncryptedConnection() {
 	cc.Connected = true
 	defer func() {
-		for client, connected := range cc.Server.Clients {
-			if !connected {
+		for client, _ := range cc.Server.Clients {
+			if client.Connected {
 				protocol.WriteNewPacket(client.ConnEncrypted, 0x38, cc.Username, false, int16(0))
 				protocol.WriteNewPacket(client.ConnEncrypted, 0x02, protocol.CreateJsonMessage(cc.Username+" left the game", "yellow"))
 			}

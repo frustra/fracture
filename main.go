@@ -9,6 +9,7 @@ import (
 
 	"github.com/frustra/fracture/chunk"
 	"github.com/frustra/fracture/edge"
+	"github.com/frustra/fracture/entity"
 	"github.com/frustra/fracture/network"
 )
 
@@ -40,6 +41,9 @@ func main() {
 	switch role {
 	case "edge":
 		server = &edge.Server{Addr: *addr, MaxPlayers: *players, Cluster: cluster}
+
+	case "entity":
+		server = &entity.Server{Addr: *addr, Cluster: cluster, Size: *players}
 
 	case "chunk":
 		server = &chunk.Server{Addr: *addr, Cluster: cluster}
