@@ -18,6 +18,7 @@ var _ = math.Inf
 type ChunkRequest struct {
 	X                int64  `protobuf:"varint,1,req,name=x" json:"x"`
 	Z                int64  `protobuf:"varint,2,req,name=z" json:"z"`
+	Uuid             string `protobuf:"bytes,3,opt,name=uuid" json:"uuid"`
 	XXX_unrecognized []byte `json:"-"`
 }
 
@@ -37,6 +38,13 @@ func (m *ChunkRequest) GetZ() int64 {
 		return m.Z
 	}
 	return 0
+}
+
+func (m *ChunkRequest) GetUuid() string {
+	if m != nil {
+		return m.Uuid
+	}
+	return ""
 }
 
 func init() {

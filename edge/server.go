@@ -24,12 +24,18 @@ type Server struct {
 
 	keyPair *protocol.KeyPair
 
-	EntityServers map[*network.InternalConnection]int
-	ChunkServers  map[ChunkCoord]*network.InternalConnection
-	Clients       map[*GameConnection]bool
+	EntityServers     map[*network.InternalConnection]int
+	ChunkServers      map[ChunkCoord]*network.InternalConnection
+	Clients           map[*GameConnection]bool
+	PlayerConnections map[string]chan *protocol.Packet
 }
 
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
+	switch msg := message.(type) {
+	case *protobuf.ChunkResponse:
+		pkt := protocol.CreatePacket(protocol.MapChunkBulkID, int16(1), int32(len(msg.Data)), true, msg.Data, int32(msg.X), int32(msg.Z), uint16(0xFFFF), uint16(0))
+		s.PlayerConnections[msg.Uuid] <- &pkt
+	}
 }
 
 func (s *Server) Serve() error {
@@ -50,6 +56,7 @@ func (s *Server) Serve() error {
 	s.Clients = make(map[*GameConnection]bool)
 	s.EntityServers = make(map[*network.InternalConnection]int)
 	s.ChunkServers = make(map[ChunkCoord]*network.InternalConnection)
+	s.PlayerConnections = make(map[string]chan *protocol.Packet)
 
 	for {
 		conn, err := listener.Accept()
@@ -73,6 +80,16 @@ func (s *Server) NodeType() string {
 
 func (s *Server) NodePort() int {
 	return 0
+}
+
+func (s *Server) DrainPlayerConnections(cc *GameConnection) {
+	for {
+		msg := <-s.PlayerConnections[cc.Player.Uuid]
+		if msg == nil {
+			return
+		}
+		msg.Write(cc.ConnEncrypted)
+	}
 }
 
 func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalConnection, error) {
@@ -121,7 +138,7 @@ func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error
 			if err != nil {
 				return nil, err
 			}
-			s.ChunkCoord[coord] = conn
+			s.ChunkServers[coord] = conn
 			return conn, nil
 		}
 	}

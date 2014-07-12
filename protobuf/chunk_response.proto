@@ -6,4 +6,5 @@ message ChunkResponse {
 	required int64 x = 1 [(gogoproto.nullable) = false];
 	required int64 z = 2 [(gogoproto.nullable) = false];
 	required bytes data = 3;
+	optional string uuid = 4 [(gogoproto.nullable) = false];
 }

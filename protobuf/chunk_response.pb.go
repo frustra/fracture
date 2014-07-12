@@ -19,6 +19,7 @@ type ChunkResponse struct {
 	X                int64  `protobuf:"varint,1,req,name=x" json:"x"`
 	Z                int64  `protobuf:"varint,2,req,name=z" json:"z"`
 	Data             []byte `protobuf:"bytes,3,req,name=data" json:"data,omitempty"`
+	Uuid             string `protobuf:"bytes,4,opt,name=uuid" json:"uuid"`
 	XXX_unrecognized []byte `json:"-"`
 }
 
@@ -45,6 +46,13 @@ func (m *ChunkResponse) GetData() []byte {
 		return m.Data
 	}
 	return nil
+}
+
+func (m *ChunkResponse) GetUuid() string {
+	if m != nil {
+		return m.Uuid
+	}
+	return ""
 }
 
 func init() {

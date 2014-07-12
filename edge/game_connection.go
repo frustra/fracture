@@ -2,7 +2,6 @@ package edge
 
 import (
 	"bytes"
-	"compress/zlib"
 	"encoding/hex"
 	"io"
 	"log"
@@ -24,17 +23,6 @@ type GameConnection struct {
 }
 
 func (cc *GameConnection) HandleEncryptedConnection() {
-	var err error
-	cc.EntityServer, err = cc.Server.FindEntityServer(cc.Player)
-	if err != nil {
-		log.Printf("Failed to connect to entity server: %s", err)
-		protocol.WriteNewPacket(cc.ConnEncrypted, protocol.DisconnectID, protocol.CreateJsonMessage("Failed to connect to entity server!", ""))
-		return
-	}
-	cc.EntityServer.SendMessage(&protobuf.PlayerAction{
-		Player: cc.Player,
-		Action: protobuf.PlayerAction_JOIN,
-	})
 	defer func() {
 		for client, _ := range cc.Server.Clients {
 			if client.EntityServer != nil {
@@ -87,10 +75,8 @@ func (cc *GameConnection) HandleConnection() {
 			err2, ok := err.(net.Error)
 			if ok && err2.Timeout() {
 				log.Printf("Timeout handling connection: %s", err2.Error())
-				return
-			} else {
-				return
 			}
+			return
 		} else {
 			switch id {
 			case 0x00: // Handshake, Status Request, Login Start
@@ -144,35 +130,46 @@ func (cc *GameConnection) HandleConnection() {
 						protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PreAuthKickID, protocol.CreateJsonMessage("Failed to verify username!", ""))
 						return
 					}
+
+					cc.Server.PlayerConnections[cc.Player.Uuid] = make(chan *protocol.Packet, 256)
+					cc.Player.HeadY = 128
+					cc.Player.FeetY = 128 - 1.62
+
+					cc.EntityServer, err = cc.Server.FindEntityServer(cc.Player)
+					if err != nil {
+						log.Printf("Failed to connect to entity server: %s", err)
+						protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PreAuthKickID, protocol.CreateJsonMessage("Failed to connect to entity server!", ""))
+						return
+					}
+					cc.EntityServer.SendMessage(&protobuf.PlayerAction{
+						Player: cc.Player,
+						Action: protobuf.PlayerAction_JOIN,
+					})
+
+					var x, z int64
+					for x = -8; x < 8; x++ {
+						for z = -8; z < 8; z++ {
+							conn, err := cc.Server.FindChunkServer(x, z)
+							if err != nil {
+								log.Printf("Failed to connect to chunk server (%d, %d): %s", x, z, err)
+								protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PreAuthKickID, protocol.CreateJsonMessage("Failed to connect to chunk server!", ""))
+								return
+							}
+							conn.SendMessage(&protobuf.ChunkRequest{
+								X:    x,
+								Z:    z,
+								Uuid: cc.Player.Uuid,
+							})
+						}
+					}
+
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.LoginSuccessID, cc.Player.Uuid, cc.Player.Username)
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.JoinGameID, int32(1), uint8(0), byte(0), uint8(1), uint8(cc.Server.Size), "default")
-					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.SpawnPositionID, int32(0), int32(0), int32(0))
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.SpawnPositionID, int32(0), int32(128), int32(0))
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerAbilitiesID, byte(1), float32(5), float32(5))
-					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerPositionAndLookID, float64(0), float64(128), float64(0), float32(0), float32(0), false)
-					worldData := make([]byte, 4096+2048+2048+2048+256)
-					for i := 0; i < 4096; i++ {
-						if i >= 3840 {
-							worldData[i] = 2
-						} else {
-							worldData[i] = 3
-						}
-					}
-					var compressed bytes.Buffer
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerPositionAndLookID, cc.Player.X, cc.Player.HeadY, cc.Player.Z, cc.Player.Yaw, cc.Player.Pitch, cc.Player.OnGround)
 
-					w := zlib.NewWriter(&compressed)
-					for x := -10; x <= 10; x++ {
-						for y := -10; y <= 10; y++ {
-							w.Write(worldData)
-						}
-					}
-					w.Close()
-					chunkData := []interface{}{int16(21 * 21), int32(compressed.Len()), true, compressed.Bytes()}
-					for x := -10; x <= 10; x++ {
-						for y := -10; y <= 10; y++ {
-							chunkData = append(chunkData, int32(x), int32(y), uint16(1), uint16(0))
-						}
-					}
-					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.MapChunkBulkID, chunkData...)
+					go cc.Server.DrainPlayerConnections(cc)
 					cc.HandleEncryptedConnection()
 					// protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PreAuthKickID, protocol.CreateJsonMessage("Server will bbl", "blue"))
 					return

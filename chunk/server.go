@@ -43,8 +43,9 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 		x, z := req.GetX()-s.OffsetX, req.GetZ()-s.OffsetZ
 
 		res := &protobuf.ChunkResponse{
-			X: x,
-			Z: z,
+			X:    req.GetX(),
+			Z:    req.GetZ(),
+			Uuid: req.Uuid,
 		}
 
 		if x < 0 || z < 0 || x >= ChunkWidthPerNode || z >= ChunkWidthPerNode {

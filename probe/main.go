@@ -23,7 +23,7 @@ func (s *H) HandleMessage(message interface{}, conn *network.InternalConnection)
 }
 
 func main() {
-	i, err := network.ConnectInternal("127.0.0.1:25565", &H{})
+	i, err := network.ConnectInternal("127.0.0.1:25566", &H{})
 	if err != nil {
 		panic(err)
 	}
