@@ -1,11 +1,11 @@
 package protocol
 
 import (
+	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
+	"log"
 	"math"
-	"reflect"
 )
 
 const (
@@ -70,109 +70,27 @@ func (p RawPacket) Serialize() []byte {
 	id := Uvarint{p.Id}.Bytes()
 	size := Uvarint{uint64(len(p.Buf) + len(id))}.Bytes()
 	buf := make([]byte, len(p.Buf)+len(id)+len(size))
+
 	copy(buf, size)
 	copy(buf[len(size):], id)
 	copy(buf[len(id)+len(size):], p.Buf)
+
 	return buf
 }
 
 func (p Packet) Serialize() []byte {
-	buf := make([]byte, 65536)
-	n := binary.PutUvarint(buf, p.Id)
+	buf := new(bytes.Buffer) // TODO: buffer pool?
+	buf.Write(Uvarint{p.Id}.Bytes())
+
 	for j := 0; j < len(p.Fields); j++ {
-		switch i := p.Fields[j].(type) {
-		case []byte:
-			for k := 0; k < len(i); k++ {
-				buf[n] = i[k]
-				n++
-			}
-		case byte:
-			buf[n] = i
-			n++
-		case bool:
-			if i {
-				buf[n] = 0x01
-			} else {
-				buf[n] = 0x00
-			}
-			n++
-		case int16:
-			buf[n] = byte((i >> 8) & 0xFF)
-			buf[n+1] = byte(i & 0xFF)
-			n += 2
-		case uint16:
-			buf[n] = byte((i >> 8) & 0xFF)
-			buf[n+1] = byte(i & 0xFF)
-			n += 2
-		case int32:
-			buf[n] = byte((i >> 24) & 0xFF)
-			buf[n+1] = byte((i >> 16) & 0xFF)
-			buf[n+2] = byte((i >> 8) & 0xFF)
-			buf[n+3] = byte(i & 0xFF)
-			n += 4
-		case uint32:
-			buf[n] = byte((i >> 24) & 0xFF)
-			buf[n+1] = byte((i >> 16) & 0xFF)
-			buf[n+2] = byte((i >> 8) & 0xFF)
-			buf[n+3] = byte(i & 0xFF)
-			n += 4
-		case int64:
-			buf[n] = byte((i >> 56) & 0xFF)
-			buf[n+1] = byte((i >> 48) & 0xFF)
-			buf[n+2] = byte((i >> 40) & 0xFF)
-			buf[n+3] = byte((i >> 32) & 0xFF)
-			buf[n+4] = byte((i >> 24) & 0xFF)
-			buf[n+5] = byte((i >> 16) & 0xFF)
-			buf[n+6] = byte((i >> 8) & 0xFF)
-			buf[n+7] = byte(i & 0xFF)
-			n += 8
-		case float32:
-			k := math.Float32bits(i)
-			buf[n] = byte((k >> 24) & 0xFF)
-			buf[n+1] = byte((k >> 16) & 0xFF)
-			buf[n+2] = byte((k >> 8) & 0xFF)
-			buf[n+3] = byte(k & 0xFF)
-			n += 4
-		case float64:
-			k := math.Float64bits(i)
-			buf[n] = byte((k >> 56) & 0xFF)
-			buf[n+1] = byte((k >> 48) & 0xFF)
-			buf[n+2] = byte((k >> 40) & 0xFF)
-			buf[n+3] = byte((k >> 32) & 0xFF)
-			buf[n+4] = byte((k >> 24) & 0xFF)
-			buf[n+5] = byte((k >> 16) & 0xFF)
-			buf[n+6] = byte((k >> 8) & 0xFF)
-			buf[n+7] = byte(k & 0xFF)
-			n += 8
-		case string:
-			n += binary.PutUvarint(buf[n:], uint64(len(i)))
-			for k := 0; k < len(i); k++ {
-				buf[n] = i[k]
-				n++
-			}
-		case Varint:
-			buf2 := i.Bytes()
-			for k := 0; k < len(buf2); k++ {
-				buf[n] = buf2[k]
-				n++
-			}
-		case Uvarint:
-			buf2 := i.Bytes()
-			for k := 0; k < len(buf2); k++ {
-				buf[n] = buf2[k]
-				n++
-			}
-		case Serializable:
-			buf2 := i.Serialize()
-			for k := 0; k < len(buf2); k++ {
-				buf[n] = buf2[k]
-				n++
-			}
-		default:
-			fmt.Printf("Unknown serialization: (%d) %s\n", j, reflect.ValueOf(p.Fields[j]).String())
+		_, err := serializeValueTo(buf, p.Fields[j])
+		if err != nil {
+			log.Printf("Error serializing field %d: %s", j, err)
 		}
 	}
-	return append(Uvarint{uint64(n)}.Bytes(), buf[0:n]...)
+
+	length := Uvarint{uint64(buf.Len())}
+	return append(length.Bytes(), buf.Bytes()...)
 }
 
 func (p Packet) Write(conn io.Writer) error {
