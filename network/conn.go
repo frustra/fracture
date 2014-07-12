@@ -11,7 +11,7 @@ import (
 )
 
 type MessageHandler interface {
-	HandleMessage(interface{})
+	HandleMessage(message interface{}, conn *InternalConnection)
 }
 
 type InternalConnection struct {
@@ -49,7 +49,7 @@ func (c *InternalConnection) Handle() error {
 			return err
 		}
 
-		c.handler.HandleMessage(message)
+		c.handler.HandleMessage(message.GetValue(), c)
 	}
 }
 
@@ -73,11 +73,15 @@ func (c *InternalConnection) FlushQueue() error {
 	return nil
 }
 
-func (c *InternalConnection) SendMessage(val proto.Message) error {
-	buf, err := proto.Marshal(val)
+func (c *InternalConnection) SendMessage(val interface{}) error {
+	message := &protobuf.InternalMessage{}
+	message.SetValue(val)
+
+	buf, err := proto.Marshal(message)
 	if err != nil {
 		return err
 	}
+
 	c.queue <- buf
 	return nil
 }

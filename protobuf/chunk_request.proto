@@ -1,0 +1,6 @@
+package protobuf;
+
+message ChunkRequest {
+	required int64 x = 1;
+	required int64 z = 2;
+}

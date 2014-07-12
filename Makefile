@@ -4,5 +4,5 @@ protobuf-deps:
 	go get -u code.google.com/p/gogoprotobuf/{proto,protoc-gen-gogo,gogoproto}
 
 protobufs:
-	protoc --gogo_out=. protobuf/*.proto
+	cd protobuf; protoc --proto_path=../../../..:../../../../code.google.com/p/gogoprotobuf/protobuf/:. --gogo_out=. *.proto
 
