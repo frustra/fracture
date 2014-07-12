@@ -12,6 +12,10 @@ import (
 	"github.com/frustra/fracture/protobuf"
 )
 
+type ChunkCoord struct {
+	X, Z int64
+}
+
 type Server struct {
 	Addr    string
 	Size    int
@@ -20,6 +24,7 @@ type Server struct {
 	keyPair *protocol.KeyPair
 
 	EntityServers map[*network.InternalConnection]int
+	ChunkServers  map[ChunkCoord]*network.InternalConnection
 	Clients       map[*GameConnection]bool
 }
 
@@ -43,6 +48,7 @@ func (s *Server) Serve() error {
 
 	s.Clients = make(map[*GameConnection]bool)
 	s.EntityServers = make(map[*network.InternalConnection]int)
+	s.ChunkServers = make(map[ChunkCoord]*network.InternalConnection)
 
 	for {
 		conn, err := listener.Accept()
@@ -67,6 +73,7 @@ func (s *Server) NodeType() string {
 func (s *Server) NodePort() int {
 	return 0
 }
+
 func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalConnection, error) {
 	var closestDist float64 = -1
 	var closestServer *network.InternalConnection
@@ -96,4 +103,18 @@ func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalCon
 			return nil, errors.New("No entity servers available!")
 		}
 	}
+}
+
+func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error) {
+	if conn, exists := s.ChunkServers[ChunkCoord{x, z}]; exists {
+		return conn, nil
+	}
+
+	chunkServers := s.Cluster.MetaLookup["chunk"]
+	for _, meta := range chunkServers {
+		if *meta.X == x && *meta.Z == z {
+			return network.ConnectInternal(meta.GetAddr(), s)
+		}
+	}
+	return nil, errors.New("No chunk server for this area!")
 }
