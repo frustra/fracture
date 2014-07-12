@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	ChunkWidthPerNode = 4 // Side length of a square.
+	ChunkWidthPerNode = 8 // Side length of a square.
 )
 
 type Server struct {
