@@ -14,7 +14,6 @@ type Server struct {
 	Cluster *network.Cluster
 
 	OffsetX, OffsetZ int64
-	Size             int // Inclusive diameter.
 
 	Storage *Chunk
 }
