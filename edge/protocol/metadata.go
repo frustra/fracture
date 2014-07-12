@@ -29,10 +29,28 @@ type Metadata struct {
 	values map[byte]interface{}
 }
 
-func NewMetadata() *Metadata {
-	return &Metadata{
+func NewMetadata(v ...interface{}) *Metadata {
+	m := &Metadata{
 		values: make(map[byte]interface{}),
 	}
+
+	var key MetadataID
+	var hasKey bool
+
+	for _, val := range v {
+		if !hasKey {
+			key = val.(MetadataID)
+			hasKey = true
+		} else {
+			m.Set(key, val)
+			hasKey = false
+		}
+	}
+
+	if hasKey {
+		panic("wrong number of arguments")
+	}
+	return m
 }
 
 func (m *Metadata) Serialize() []byte {
