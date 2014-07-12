@@ -1,10 +1,11 @@
+package protobuf;
+
 import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
 import "chunk_request.proto";
 import "chunk_response.proto";
 import "bulk_chunk_request.proto";
 import "bulk_chunk_response.proto";
-
-package protobuf;
+import "player_action.proto";
 
 message InternalMessage {
 	option (gogoproto.onlyone) = true;
@@ -12,4 +13,5 @@ message InternalMessage {
 	optional ChunkResponse ChunkResponse = 2;
 	optional BulkChunkRequest BulkChunkRequest = 3;
 	optional BulkChunkResponse BulkChunkResponse = 4;
+	optional PlayerAction PlayerAction = 5;
 }

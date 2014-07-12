@@ -10,36 +10,46 @@ import (
 	"time"
 
 	"github.com/frustra/fracture/edge/protocol"
+	"github.com/frustra/fracture/network"
+	"github.com/frustra/fracture/protobuf"
 )
 
 type GameConnection struct {
 	Server        *Server
 	Conn          net.Conn
 	ConnEncrypted *protocol.AESConn
-	Connected     bool
 
-	Username string
-	X        float64
-	ServerId int64
+	Player       *protobuf.Player
+	EntityServer *network.InternalConnection
 }
 
 func (cc *GameConnection) HandleEncryptedConnection() {
-	cc.Connected = true
+	var err error
+	cc.EntityServer, err = cc.Server.FindEntityServer(cc.Player)
+	if err != nil {
+		log.Printf("Failed to connect to entity server: %s", err)
+		protocol.WriteNewPacket(cc.ConnEncrypted, 0x40, protocol.CreateJsonMessage("Failed to connect to entity server!", ""))
+		return
+	}
+	cc.EntityServer.SendMessage(&protobuf.PlayerAction{
+		Player: cc.Player,
+		Action: protobuf.PlayerAction_JOIN,
+	})
 	defer func() {
 		for client, _ := range cc.Server.Clients {
-			if client.Connected {
-				protocol.WriteNewPacket(client.ConnEncrypted, 0x38, cc.Username, false, int16(0))
-				protocol.WriteNewPacket(client.ConnEncrypted, 0x02, protocol.CreateJsonMessage(cc.Username+" left the game", "yellow"))
+			if client.EntityServer != nil {
+				protocol.WriteNewPacket(client.ConnEncrypted, 0x38, cc.Player.Username, false, int16(0))
+				protocol.WriteNewPacket(client.ConnEncrypted, 0x02, protocol.CreateJsonMessage(cc.Player.Username+" left the game", "yellow"))
 			}
 		}
 	}()
 	go func() {
-		for cc.Connected {
+		for cc.EntityServer != nil {
 			time.Sleep(1 * time.Second)
 			protocol.WriteNewPacket(cc.ConnEncrypted, 0x00, int32(time.Now().Nanosecond()))
 		}
 	}()
-	for cc.Connected {
+	for cc.EntityServer != nil {
 		cc.Conn.SetReadDeadline(time.Now().Add(time.Second * 30))
 		id, buf, err := protocol.ReadPacket(cc.ConnEncrypted)
 		if err != nil {
@@ -51,8 +61,8 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			message, _ := protocol.ReadString(buf, 0)
 			if len(message) > 0 && message[0] != '/' {
 				for client, _ := range cc.Server.Clients {
-					if client.Connected {
-						protocol.WriteNewPacket(client.ConnEncrypted, 0x02, protocol.CreateJsonMessage("<"+cc.Username+"> "+message, ""))
+					if client.EntityServer != nil {
+						protocol.WriteNewPacket(client.ConnEncrypted, 0x02, protocol.CreateJsonMessage("<"+cc.Player.Username+"> "+message, ""))
 					}
 				}
 			}
@@ -63,14 +73,14 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 func (cc *GameConnection) HandleConnection() {
 	defer func() {
 		delete(cc.Server.Clients, cc)
-		cc.Connected = false
+		cc.EntityServer = nil
 		cc.Conn.Close()
 	}()
 	remoteAddr := cc.Conn.RemoteAddr().String()
 
 	state := 0
 	verifyToken := make([]byte, 0)
-	for cc.Connected {
+	for {
 		cc.Conn.SetReadDeadline(time.Now().Add(time.Second * 10))
 		id, buf, err := protocol.ReadPacket(cc.Conn)
 		if err != nil {
@@ -86,11 +96,11 @@ func (cc *GameConnection) HandleConnection() {
 			case 0x00:
 				if state == 1 {
 					log.Printf("Server pinged from: %s", remoteAddr)
-					protocol.WriteNewPacket(cc.Conn, 0x00, protocol.CreateStatusResponse("1.7.10", 5, 0, cc.Server.MaxPlayers, protocol.CreateJsonMessage("Fracture Distributed Server", "green")))
+					protocol.WriteNewPacket(cc.Conn, 0x00, protocol.CreateStatusResponse("1.7.10", 5, 0, cc.Server.Size, protocol.CreateJsonMessage("Fracture Distributed Server", "green")))
 				} else if state == 2 {
-					cc.Username, _ = protocol.ReadString(buf, 0)
-					log.Printf("Got connection from %s", cc.Username)
-					defer log.Printf("Connection closed for %s", cc.Username)
+					cc.Player.Username, _ = protocol.ReadString(buf, 0)
+					log.Printf("Got connection from %s", cc.Player.Username)
+					defer log.Printf("Connection closed for %s", cc.Player.Username)
 
 					pubKey := cc.Server.keyPair.Serialize()
 					verifyToken = protocol.GenerateKey(16)
@@ -128,14 +138,14 @@ func (cc *GameConnection) HandleConnection() {
 						log.Printf("Error creating AES connection: %s", err.Error())
 					}
 
-					uuid, err := protocol.CheckAuth(cc.Username, "", cc.Server.keyPair, sharedSecret)
+					cc.Player.Uuid, err = protocol.CheckAuth(cc.Player.Username, "", cc.Server.keyPair, sharedSecret)
 					if err != nil {
-						log.Printf("Failed to verify username %s: %s", cc.Username, err)
+						log.Printf("Failed to verify username %s: %s", cc.Player.Username, err)
 						protocol.WriteNewPacket(cc.ConnEncrypted, 0x00, protocol.CreateJsonMessage("Failed to verify username!", ""))
 						return
 					}
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x02, uuid, cc.Username)
-					protocol.WriteNewPacket(cc.ConnEncrypted, 0x01, int32(1), uint8(0), byte(0), uint8(1), uint8(cc.Server.MaxPlayers), "default")
+					protocol.WriteNewPacket(cc.ConnEncrypted, 0x02, cc.Player.Uuid, cc.Player.Username)
+					protocol.WriteNewPacket(cc.ConnEncrypted, 0x01, int32(1), uint8(0), byte(0), uint8(1), uint8(cc.Server.Size), "default")
 					protocol.WriteNewPacket(cc.ConnEncrypted, 0x05, int32(0), int32(0), int32(0))
 					protocol.WriteNewPacket(cc.ConnEncrypted, 0x39, byte(1), float32(5), float32(5))
 					protocol.WriteNewPacket(cc.ConnEncrypted, 0x08, float64(0), float64(128), float64(0), float32(0), float32(0), false)

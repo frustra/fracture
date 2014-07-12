@@ -1,0 +1,13 @@
+package protobuf;
+
+import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
+import "player.proto";
+
+message PlayerAction {
+	enum Action {
+		JOIN = 0;
+		LEAVE = 1;
+	}
+	required Player player = 1;
+	required Action action = 2 [(gogoproto.nullable) = false];
+}

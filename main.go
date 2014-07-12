@@ -40,7 +40,7 @@ func main() {
 
 	switch role {
 	case "edge":
-		server = &edge.Server{Addr: *addr, MaxPlayers: *players, Cluster: cluster}
+		server = &edge.Server{Addr: *addr, Cluster: cluster, Size: *players}
 
 	case "entity":
 		server = &entity.Server{Addr: *addr, Cluster: cluster, Size: *players}

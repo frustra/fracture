@@ -1,22 +1,41 @@
 package edge
 
 import (
+	"errors"
 	"log"
+	"math"
 	"math/rand"
 	"net"
 
 	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
+	"github.com/frustra/fracture/protobuf"
 )
 
 type Server struct {
-	Addr       string
-	MaxPlayers int
-	Cluster    *network.Cluster
+	Addr    string
+	Size    int
+	Cluster *network.Cluster
 
 	keyPair *protocol.KeyPair
 
-	Clients map[*GameConnection]bool
+	EntityServers map[*network.InternalConnection]int
+	Clients       map[*GameConnection]bool
+}
+
+func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
+	switch req := message.(type) {
+	case *protobuf.ChunkRequest:
+		x, z := req.GetX(), req.GetZ()
+
+		res := &protobuf.ChunkResponse{
+			X:    &x,
+			Z:    &z,
+			Data: make([]byte, 0),
+		}
+
+		conn.SendMessage(res)
+	}
 }
 
 func (s *Server) Serve() error {
@@ -35,6 +54,7 @@ func (s *Server) Serve() error {
 	defer listener.Close()
 
 	s.Clients = make(map[*GameConnection]bool)
+	s.EntityServers = make(map[*network.InternalConnection]int)
 
 	for {
 		conn, err := listener.Accept()
@@ -43,11 +63,9 @@ func (s *Server) Serve() error {
 		}
 
 		client := &GameConnection{
-			Server:        s,
-			Conn:          conn,
-			ConnEncrypted: nil,
-			Connected:     true,
-			Username:      "",
+			Server: s,
+			Conn:   conn,
+			Player: &protobuf.Player{},
 		}
 		s.Clients[client] = true
 		go client.HandleConnection()
@@ -59,33 +77,35 @@ func (s *Server) NodeType() string {
 }
 
 func (s *Server) NodePort() int {
-	return 1234
+	return 0
 }
-func (s *Server) FindEntityServer(x float64) string {
-	var minPlayer *GameConnection // One player right of x
-	var maxPlayer *GameConnection // One player left of x
+func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalConnection, error) {
+	var closestDist float64 = -1
+	var closestServer *network.InternalConnection
 	for client, _ := range s.Clients {
-		if client.Connected {
-			if client.X >= x {
-				if minPlayer == nil || minPlayer.X < client.X {
-					minPlayer = client
-				}
-			}
-			if client.X <= x {
-				if maxPlayer == nil || maxPlayer.X > client.X {
-					maxPlayer = client
-				}
+		if client.EntityServer != nil {
+			dist := math.Abs(client.Player.X - player.X)
+			if closestDist < 0 || closestDist > dist {
+				closestDist = dist
+				closestServer = client.EntityServer
 			}
 		}
 	}
-	entityServers := s.Cluster.MetaLookup["entity"]
-	serverRange := make([]string, len(entityServers))
-	i := 0
-	for _, meta := range entityServers {
-		if meta.GetX() >= maxPlayer.ServerId && meta.GetX() <= minPlayer.ServerId {
+	if closestServer != nil {
+		return closestServer, nil
+	} else {
+		entityServers := s.Cluster.MetaLookup["entity"]
+		serverRange := make([]string, len(entityServers))
+		i := 0
+		for _, meta := range entityServers {
 			serverRange[i] = meta.GetAddr()
 			i++
 		}
+		if i > 0 {
+			addr := serverRange[rand.Intn(i)]
+			return network.ConnectInternal(addr, s)
+		} else {
+			return nil, errors.New("No entity servers available!")
+		}
 	}
-	return serverRange[rand.Intn(i)]
 }

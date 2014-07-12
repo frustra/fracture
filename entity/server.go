@@ -2,8 +2,11 @@ package entity
 
 import (
 	"log"
+	"net"
+	"strconv"
 
 	"github.com/frustra/fracture/network"
+	"github.com/frustra/fracture/protobuf"
 )
 
 type Server struct {
@@ -11,8 +14,8 @@ type Server struct {
 	Cluster *network.Cluster
 
 	Size  int
-	XSort []*Player
-	YSort []*Player
+	XSort []*protobuf.Player
+	YSort []*protobuf.Player
 }
 
 func (s *Server) Serve() error {
@@ -29,5 +32,7 @@ func (s *Server) NodeType() string {
 }
 
 func (s *Server) NodePort() int {
-	return 1234
+	_, metaPortString, _ := net.SplitHostPort(s.Addr)
+	port, _ := strconv.Atoi(metaPortString)
+	return port
 }

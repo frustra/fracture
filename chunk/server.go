@@ -2,6 +2,8 @@ package chunk
 
 import (
 	"log"
+	"net"
+	"strconv"
 
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
@@ -43,5 +45,7 @@ func (s *Server) NodeType() string {
 }
 
 func (s *Server) NodePort() int {
-	return 1234
+	_, metaPortString, _ := net.SplitHostPort(s.Addr)
+	port, _ := strconv.Atoi(metaPortString)
+	return port
 }
