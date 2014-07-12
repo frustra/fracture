@@ -8,17 +8,19 @@ import proto "code.google.com/p/gogoprotobuf/proto"
 import json "encoding/json"
 import math "math"
 
+// discarding unused import gogoproto "code.google.com/p/gogoprotobuf/gogoproto/gogo.pb"
+
 // Reference proto, json, and math imports to suppress error if they are not otherwise used.
 var _ = proto.Marshal
 var _ = &json.SyntaxError{}
 var _ = math.Inf
 
 type NodeMeta struct {
-	Addr             *string `protobuf:"bytes,1,req,name=addr" json:"addr,omitempty"`
-	Type             *string `protobuf:"bytes,2,req,name=type" json:"type,omitempty"`
-	X                *int64  `protobuf:"varint,3,opt,name=x" json:"x,omitempty"`
-	Y                *int64  `protobuf:"varint,4,opt,name=y" json:"y,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
+	Addr             string `protobuf:"bytes,1,req,name=addr" json:"addr"`
+	Type             string `protobuf:"bytes,2,req,name=type" json:"type"`
+	X                *int64 `protobuf:"varint,3,opt,name=x" json:"x,omitempty"`
+	Z                *int64 `protobuf:"varint,4,opt,name=z" json:"z,omitempty"`
+	XXX_unrecognized []byte `json:"-"`
 }
 
 func (m *NodeMeta) Reset()         { *m = NodeMeta{} }
@@ -26,15 +28,15 @@ func (m *NodeMeta) String() string { return proto.CompactTextString(m) }
 func (*NodeMeta) ProtoMessage()    {}
 
 func (m *NodeMeta) GetAddr() string {
-	if m != nil && m.Addr != nil {
-		return *m.Addr
+	if m != nil {
+		return m.Addr
 	}
 	return ""
 }
 
 func (m *NodeMeta) GetType() string {
-	if m != nil && m.Type != nil {
-		return *m.Type
+	if m != nil {
+		return m.Type
 	}
 	return ""
 }
@@ -46,9 +48,9 @@ func (m *NodeMeta) GetX() int64 {
 	return 0
 }
 
-func (m *NodeMeta) GetY() int64 {
-	if m != nil && m.Y != nil {
-		return *m.Y
+func (m *NodeMeta) GetZ() int64 {
+	if m != nil && m.Z != nil {
+		return *m.Z
 	}
 	return 0
 }

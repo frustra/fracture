@@ -24,8 +24,8 @@ func main() {
 		players = flag.Int("size", 16, "max players")
 
 		// Chunk server flags.
-		// x = flag.Int64("x", 0, "x offset")
-		// z = flag.Int64("z", 0, "z offset")
+		x = flag.Int64("x", 0, "x offset")
+		z = flag.Int64("z", 0, "z offset")
 	)
 
 	flag.Parse()
@@ -46,14 +46,17 @@ func main() {
 		server = &entity.Server{Addr: *addr, Cluster: cluster, Size: *players}
 
 	case "chunk":
-		server = &chunk.Server{Addr: *addr, Cluster: cluster}
+		chunkServer := &chunk.Server{Addr: *addr, Cluster: cluster, OffsetX: *x, OffsetZ: *z}
+		cluster.LocalNodeMeta.X = &chunkServer.OffsetX
+		cluster.LocalNodeMeta.Z = &chunkServer.OffsetZ
+		server = chunkServer
 
 	default:
 		log.Fatal("Invalid role: ", role)
 	}
 
-	cluster.NodeType = server.NodeType()
-	cluster.NodeAddr = ":" + strconv.Itoa(server.NodePort())
+	cluster.LocalNodeMeta.Type = server.NodeType()
+	cluster.LocalNodeMeta.Addr = ":" + strconv.Itoa(server.NodePort())
 
 	if err := cluster.Join(); err != nil {
 		log.Fatal("Failed to join cluster: ", err)

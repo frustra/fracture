@@ -1,7 +1,9 @@
 package protobuf;
 
+import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
+
 message ChunkResponse {
-	required int64 x = 1;
-	required int64 z = 2;
+	required int64 x = 1 [(gogoproto.nullable) = false];
+	required int64 z = 2 [(gogoproto.nullable) = false];
 	required bytes data = 3;
 }

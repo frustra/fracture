@@ -8,14 +8,16 @@ import proto "code.google.com/p/gogoprotobuf/proto"
 import json "encoding/json"
 import math "math"
 
+// discarding unused import gogoproto "code.google.com/p/gogoprotobuf/gogoproto/gogo.pb"
+
 // Reference proto, json, and math imports to suppress error if they are not otherwise used.
 var _ = proto.Marshal
 var _ = &json.SyntaxError{}
 var _ = math.Inf
 
 type ChunkRequest struct {
-	X                *int64 `protobuf:"varint,1,req,name=x" json:"x,omitempty"`
-	Z                *int64 `protobuf:"varint,2,req,name=z" json:"z,omitempty"`
+	X                int64  `protobuf:"varint,1,req,name=x" json:"x"`
+	Z                int64  `protobuf:"varint,2,req,name=z" json:"z"`
 	XXX_unrecognized []byte `json:"-"`
 }
 
@@ -24,15 +26,15 @@ func (m *ChunkRequest) String() string { return proto.CompactTextString(m) }
 func (*ChunkRequest) ProtoMessage()    {}
 
 func (m *ChunkRequest) GetX() int64 {
-	if m != nil && m.X != nil {
-		return *m.X
+	if m != nil {
+		return m.X
 	}
 	return 0
 }
 
 func (m *ChunkRequest) GetZ() int64 {
-	if m != nil && m.Z != nil {
-		return *m.Z
+	if m != nil {
+		return m.Z
 	}
 	return 0
 }

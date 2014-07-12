@@ -19,7 +19,7 @@ type Server struct {
 }
 
 func (s *Server) Serve() error {
-	log.Printf("Chunk server loading on %s\n", s.Addr)
+	log.Printf("Chunk server (%d, %d) loading on %s\n", s.OffsetX, s.OffsetZ, s.Addr)
 	s.Storage = NewChunk(s.OffsetX, s.OffsetZ)
 	return network.ServeInternal(s.Addr, s)
 }
@@ -30,8 +30,8 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 		x, z := req.GetX(), req.GetZ()
 
 		res := &protobuf.ChunkResponse{
-			X:    &x,
-			Z:    &z,
+			X:    x,
+			Z:    z,
 			Data: s.Storage.MarshallCompressed(),
 		}
 

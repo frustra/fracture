@@ -15,7 +15,7 @@ func (s *H) HandleMessage(message interface{}, conn *network.InternalConnection)
 	log.Print("Handler invoked: ", message)
 	switch msg := message.(type) {
 	case *protobuf.ChunkResponse:
-		chunk := &chunk.Chunk{OffsetX: *msg.X, OffsetZ: *msg.Z}
+		chunk := &chunk.Chunk{OffsetX: msg.X, OffsetZ: msg.Z}
 		chunk.UnmarshallCompressed(msg.Data)
 
 		log.Print(chunk)
@@ -29,8 +29,8 @@ func main() {
 	}
 	var x, z int64 = 1, 3
 	i.SendMessage(&protobuf.ChunkRequest{
-		X: &x,
-		Z: &z,
+		X: x,
+		Z: z,
 	})
 	var c chan bool
 	c <- true

@@ -54,8 +54,8 @@ type Cluster struct {
 
 	existing string
 
-	NodeType, NodeAddr string
-	nodeMeta           []byte
+	LocalNodeMeta  protobuf.NodeMeta
+	nodeMetaBuffer []byte
 
 	MetaLookup map[string]map[string]*protobuf.NodeMeta
 	TypeLookup map[string]string
@@ -66,17 +66,12 @@ func (c *Cluster) Name() string {
 }
 
 func (c *Cluster) Join() error {
-	meta := &protobuf.NodeMeta{
-		Addr: proto.String(c.NodeAddr),
-		Type: proto.String(c.NodeType),
-	}
-
-	nodeMeta, err := proto.Marshal(meta)
+	nodeMeta, err := proto.Marshal(&c.LocalNodeMeta)
 	if err != nil {
 		return err
 	}
 
-	c.nodeMeta = nodeMeta
+	c.nodeMetaBuffer = nodeMeta
 
 	m, err := memberlist.Create(c.config)
 	if err != nil {
@@ -140,7 +135,7 @@ func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
 }
 
 func (c *Cluster) NodeMeta(limit int) []byte {
-	return c.nodeMeta
+	return c.nodeMetaBuffer
 }
 
 func (c *Cluster) NotifyMsg([]byte) {
