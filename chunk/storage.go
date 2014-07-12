@@ -22,12 +22,10 @@ type Chunk struct {
 }
 
 func NewChunk(offsetX, offsetZ int64) *Chunk {
-	c := &Chunk{
+	return &Chunk{
 		OffsetX: offsetX,
 		OffsetZ: offsetZ,
 	}
-	c.Generate()
-	return c
 }
 
 func (c *Chunk) Set(x, y, z int, val byte) {

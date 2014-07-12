@@ -9,30 +9,45 @@ import (
 	"github.com/frustra/fracture/protobuf"
 )
 
+const (
+	ChunkWidthPerNode = 4 // Side length of a square.
+)
+
 type Server struct {
 	Addr    string
 	Cluster *network.Cluster
 
 	OffsetX, OffsetZ int64
 
-	Storage *Chunk
+	Storage [ChunkWidthPerNode][ChunkWidthPerNode]*Chunk // [z][x]
 }
 
 func (s *Server) Serve() error {
 	log.Printf("Chunk server (%d, %d) loading on %s\n", s.OffsetX, s.OffsetZ, s.Addr)
-	s.Storage = NewChunk(s.OffsetX, s.OffsetZ)
+	for z := int64(0); z < ChunkWidthPerNode; z++ {
+		for x := int64(0); x < ChunkWidthPerNode; x++ {
+			c := NewChunk(s.OffsetX+x, s.OffsetZ+z)
+			c.Generate()
+			s.Storage[z][x] = c
+		}
+	}
 	return network.ServeInternal(s.Addr, s)
 }
 
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
 	switch req := message.(type) {
 	case *protobuf.ChunkRequest:
-		x, z := req.GetX(), req.GetZ()
+		x, z := req.GetX()-s.OffsetX, req.GetZ()-s.OffsetZ
 
 		res := &protobuf.ChunkResponse{
-			X:    x,
-			Z:    z,
-			Data: s.Storage.MarshallCompressed(),
+			X: x,
+			Z: z,
+		}
+
+		if x < 0 || z < 0 || x >= ChunkWidthPerNode || z >= ChunkWidthPerNode {
+			res.Data = make([]byte, 0)
+		} else {
+			res.Data = s.Storage[z][x].MarshallCompressed()
 		}
 
 		conn.SendMessage(res)

@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 
+	"github.com/frustra/fracture/chunk"
 	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
@@ -106,6 +107,8 @@ func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalCon
 }
 
 func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error) {
+	x, z = chunk.ChunkCoordsToNode(x, z)
+
 	if conn, exists := s.ChunkServers[ChunkCoord{x, z}]; exists {
 		return conn, nil
 	}
