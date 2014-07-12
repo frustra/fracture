@@ -131,7 +131,7 @@ func (cc *GameConnection) HandleConnection() {
 					}
 
 					cc.Server.PlayerConnections[cc.Player.Uuid] = make(chan *protocol.Packet, 256)
-					cc.Player.EntityId = int64(len(cc.Server.PlayerConnections))
+					cc.Player.EntityId = int64(len(cc.Server.PlayerConnections) + 10)
 					cc.Player.HeadY = 128
 					cc.Player.FeetY = 128 - 1.62
 
@@ -164,7 +164,7 @@ func (cc *GameConnection) HandleConnection() {
 					}
 
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.LoginSuccessID, cc.Player.Uuid, cc.Player.Username)
-					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.JoinGameID, int32(cc.Player.EntityId), uint8(1), byte(0), uint8(1), uint8(cc.Server.Size), "default")
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.JoinGameID, int32(1), uint8(1), byte(0), uint8(1), uint8(cc.Server.Size), "default")
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.SpawnPositionID, int32(0), int32(128), int32(0))
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerAbilitiesID, byte(1), float32(5), float32(5))
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerPositionAndLookID, cc.Player.X, cc.Player.HeadY, cc.Player.Z, cc.Player.Yaw, cc.Player.Pitch, cc.Player.OnGround)
