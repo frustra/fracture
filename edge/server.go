@@ -33,8 +33,7 @@ type Server struct {
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
 	switch msg := message.(type) {
 	case *protobuf.ChunkResponse:
-		pkt := protocol.CreatePacket(protocol.MapChunkBulkID, int16(1), int32(len(msg.Data)), true, msg.Data, int32(msg.X), int32(msg.Z), uint16(0xFFFF), uint16(0))
-		s.PlayerConnections[msg.Uuid] <- &pkt
+		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.MapChunkBulkID, int16(1), int32(len(msg.Data)), true, msg.Data, int32(msg.X), int32(msg.Z), uint16(0xFFFF), uint16(0))
 	}
 }
 

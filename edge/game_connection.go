@@ -24,17 +24,17 @@ type GameConnection struct {
 
 func (cc *GameConnection) HandleEncryptedConnection() {
 	defer func() {
-		for client, _ := range cc.Server.Clients {
-			if client.EntityServer != nil {
-				protocol.WriteNewPacket(client.ConnEncrypted, protocol.PlayerListItemID, cc.Player.Username, false, int16(0))
-				protocol.WriteNewPacket(client.ConnEncrypted, protocol.ChatMessageID, protocol.CreateJsonMessage(cc.Player.Username+" left the game", "yellow"))
+		for uuid, conn := range cc.Server.PlayerConnections {
+			if uuid != cc.Player.Uuid {
+				conn <- protocol.CreatePacket(protocol.PlayerListItemID, cc.Player.Username, false, int16(0))
+				conn <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(cc.Player.Username+" left the game", "yellow"))
 			}
 		}
 	}()
 	go func() {
 		for cc.EntityServer != nil {
 			time.Sleep(1 * time.Second)
-			protocol.WriteNewPacket(cc.ConnEncrypted, protocol.KeepAliveID, int32(time.Now().Nanosecond()))
+			cc.Server.PlayerConnections[cc.Player.Uuid] <- protocol.CreatePacket(protocol.KeepAliveID, int32(time.Now().Nanosecond()))
 		}
 	}()
 	for cc.EntityServer != nil {
@@ -48,10 +48,8 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 		} else if id == 0x01 {
 			message, _ := protocol.ReadString(buf, 0)
 			if len(message) > 0 && message[0] != '/' {
-				for client, _ := range cc.Server.Clients {
-					if client.EntityServer != nil {
-						protocol.WriteNewPacket(client.ConnEncrypted, protocol.ChatMessageID, protocol.CreateJsonMessage("<"+cc.Player.Username+"> "+message, ""))
-					}
+				for _, conn := range cc.Server.PlayerConnections {
+					conn <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage("<"+cc.Player.Username+"> "+message, ""))
 				}
 			}
 		}
@@ -60,6 +58,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 
 func (cc *GameConnection) HandleConnection() {
 	defer func() {
+		delete(cc.Server.PlayerConnections, cc.Player.Uuid)
 		delete(cc.Server.Clients, cc)
 		cc.EntityServer = nil
 		cc.Conn.Close()

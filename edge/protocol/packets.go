@@ -60,8 +60,8 @@ func (v Uvarint) Bytes() []byte {
 	return buf[0:n]
 }
 
-func CreatePacket(id uint64, v ...interface{}) Packet {
-	return Packet{id, v}
+func CreatePacket(id uint64, v ...interface{}) *Packet {
+	return &Packet{id, v}
 }
 
 func (p RawPacket) Serialize() []byte {
