@@ -98,12 +98,14 @@ func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 	err := proto.Unmarshal(n.Meta, meta)
 	if err != nil {
 		log.Print("error unmarshalling node metadata: ", err)
+		return
 	}
 
 	c.TypeLookup[n.Name] = meta.GetType()
 	typeMap, ok := c.MetaLookup[meta.GetType()]
 	if !ok {
-		typeMap, c.MetaLookup[meta.GetType()] = make(map[string]*protobuf.NodeMeta)
+		typeMap = make(map[string]*protobuf.NodeMeta)
+		c.MetaLookup[meta.GetType()] = typeMap
 	}
 	typeMap[n.Name] = meta
 
@@ -116,7 +118,7 @@ func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 }
 
 func (c *Cluster) NotifyLeave(n *memberlist.Node) {
-	typeMap, ok := c.MetaLookup[meta.GetType()]
+	typeMap, ok := c.MetaLookup[c.TypeLookup[n.Name]]
 	if ok {
 		delete(typeMap, n.Name)
 	}
@@ -127,6 +129,13 @@ func (c *Cluster) NotifyLeave(n *memberlist.Node) {
 
 func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
 	typeMap := c.MetaLookup[c.TypeLookup[n.Name]]
+
+	meta := &protobuf.NodeMeta{}
+	err := proto.Unmarshal(n.Meta, meta)
+	if err != nil {
+		log.Print("error unmarshalling node metadata: ", err)
+		return
+	}
 	typeMap[n.Name] = meta
 }
 

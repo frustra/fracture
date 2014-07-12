@@ -42,7 +42,13 @@ func (s *Server) Serve() error {
 			continue
 		}
 
-		client := &GameConnection{s, conn, nil, true, ""}
+		client := &GameConnection{
+			Server:        s,
+			Conn:          conn,
+			ConnEncrypted: nil,
+			Connected:     true,
+			Username:      "",
+		}
 		s.Clients[client] = true
 		go client.HandleConnection()
 	}

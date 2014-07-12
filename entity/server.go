@@ -20,7 +20,7 @@ func (s *Server) Serve() error {
 	return network.ServeInternal(s.Addr, s)
 }
 
-func (s *Server) HandleMessage(message interface{}) {
+func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
 	log.Print("Handler invoked: ", message)
 }
 
