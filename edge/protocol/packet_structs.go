@@ -19,7 +19,7 @@ func (jm JsonMessage) Serialize() []byte {
 	if err != nil {
 		return make([]byte, 0)
 	} else {
-		return append(Uvarint{uint64(len(buf))}.Bytes(), buf...)
+		return append(Varint{uint64(len(buf))}.Bytes(), buf...)
 	}
 }
 
@@ -36,7 +36,7 @@ func (sr StatusResponse) Serialize() []byte {
 	if err != nil {
 		return make([]byte, 0)
 	} else {
-		return append(Uvarint{uint64(len(buf))}.Bytes(), buf...)
+		return append(Varint{uint64(len(buf))}.Bytes(), buf...)
 	}
 }
 

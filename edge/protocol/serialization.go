@@ -84,7 +84,7 @@ func serializeValueTo(w *bytes.Buffer, val interface{}) (int, error) {
 		})
 
 	case string:
-		nlen, err := w.Write(Uvarint{uint64(len(i))}.Bytes())
+		nlen, err := w.Write(Varint{uint64(len(i))}.Bytes())
 		if err != nil {
 			return 0, err
 		}
@@ -93,9 +93,6 @@ func serializeValueTo(w *bytes.Buffer, val interface{}) (int, error) {
 		return nlen + n, err
 
 	case Varint:
-		return w.Write(i.Bytes())
-
-	case Uvarint:
 		return w.Write(i.Bytes())
 
 	case Serializable:

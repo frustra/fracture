@@ -18,20 +18,23 @@ var _ = math.Inf
 type PlayerAction_Action int32
 
 const (
-	PlayerAction_JOIN  PlayerAction_Action = 0
-	PlayerAction_LEAVE PlayerAction_Action = 1
-	PlayerAction_MOVE  PlayerAction_Action = 2
+	PlayerAction_JOIN          PlayerAction_Action = 0
+	PlayerAction_LEAVE         PlayerAction_Action = 1
+	PlayerAction_MOVE_RELATIVE PlayerAction_Action = 2
+	PlayerAction_MOVE_ABSOLUTE PlayerAction_Action = 3
 )
 
 var PlayerAction_Action_name = map[int32]string{
 	0: "JOIN",
 	1: "LEAVE",
-	2: "MOVE",
+	2: "MOVE_RELATIVE",
+	3: "MOVE_ABSOLUTE",
 }
 var PlayerAction_Action_value = map[string]int32{
-	"JOIN":  0,
-	"LEAVE": 1,
-	"MOVE":  2,
+	"JOIN":          0,
+	"LEAVE":         1,
+	"MOVE_RELATIVE": 2,
+	"MOVE_ABSOLUTE": 3,
 }
 
 func (x PlayerAction_Action) Enum() *PlayerAction_Action {

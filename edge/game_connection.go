@@ -53,40 +53,40 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 				}
 			}
 		} else if id == 0x04 {
-			var start int = 0
-			cc.Player.X, start = protocol.ReadDouble(buf, 0)
-			cc.Player.FeetY, start = protocol.ReadDouble(buf, start)
-			cc.Player.HeadY, start = protocol.ReadDouble(buf, start)
-			cc.Player.Z, start = protocol.ReadDouble(buf, start)
-			cc.Player.OnGround, start = protocol.ReadBool(buf, start)
+			var n int = 0
+			cc.Player.X, n = protocol.ReadDouble(buf, 0)
+			cc.Player.FeetY, n = protocol.ReadDouble(buf, n)
+			cc.Player.HeadY, n = protocol.ReadDouble(buf, n)
+			cc.Player.Z, n = protocol.ReadDouble(buf, n)
+			cc.Player.OnGround, n = protocol.ReadBool(buf, n)
 
 			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
 				Player: cc.Player,
-				Action: protobuf.PlayerAction_MOVE,
+				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
 			})
 		} else if id == 0x05 {
-			var start int = 0
-			cc.Player.Yaw, start = protocol.ReadFloat(buf, 0)
-			cc.Player.Pitch, start = protocol.ReadFloat(buf, start)
-			cc.Player.OnGround, start = protocol.ReadBool(buf, start)
+			var n int = 0
+			cc.Player.Yaw, n = protocol.ReadFloat(buf, 0)
+			cc.Player.Pitch, n = protocol.ReadFloat(buf, n)
+			cc.Player.OnGround, n = protocol.ReadBool(buf, n)
 
 			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
 				Player: cc.Player,
-				Action: protobuf.PlayerAction_MOVE,
+				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
 			})
 		} else if id == 0x06 {
-			var start int = 0
-			cc.Player.X, start = protocol.ReadDouble(buf, 0)
-			cc.Player.FeetY, start = protocol.ReadDouble(buf, start)
-			cc.Player.HeadY, start = protocol.ReadDouble(buf, start)
-			cc.Player.Z, start = protocol.ReadDouble(buf, start)
-			cc.Player.Yaw, start = protocol.ReadFloat(buf, 0)
-			cc.Player.Pitch, start = protocol.ReadFloat(buf, start)
-			cc.Player.OnGround, start = protocol.ReadBool(buf, start)
+			var n int = 0
+			cc.Player.X, n = protocol.ReadDouble(buf, 0)
+			cc.Player.FeetY, n = protocol.ReadDouble(buf, n)
+			cc.Player.HeadY, n = protocol.ReadDouble(buf, n)
+			cc.Player.Z, n = protocol.ReadDouble(buf, n)
+			cc.Player.Yaw, n = protocol.ReadFloat(buf, n)
+			cc.Player.Pitch, n = protocol.ReadFloat(buf, n)
+			cc.Player.OnGround, n = protocol.ReadBool(buf, n)
 
 			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
 				Player: cc.Player,
-				Action: protobuf.PlayerAction_MOVE,
+				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
 			})
 		}
 	}
@@ -114,7 +114,7 @@ func (cc *GameConnection) HandleConnection() {
 			return
 		} else {
 			switch id {
-			case 0x00: // Handshake, Status Request, Login Start
+			case 0x00: // Handshake, Status Request, Login start
 				if state == 1 {
 					log.Printf("Server pinged from: %s", remoteAddr)
 					protocol.WriteNewPacket(cc.Conn, protocol.StatusResponseID, protocol.CreateStatusResponse("1.7.10", 5, 0, cc.Server.Size, protocol.CreateJsonMessage("Fracture Distributed Server", "green")))
@@ -127,10 +127,10 @@ func (cc *GameConnection) HandleConnection() {
 					verifyToken = protocol.GenerateKey(16)
 					protocol.WriteNewPacket(cc.Conn, protocol.EncryptionRequestID, "", int16(len(pubKey)), pubKey, int16(len(verifyToken)), verifyToken)
 				} else {
-					_, n := protocol.ReadUvarint(buf, 0) // version
-					_, n = protocol.ReadString(buf, n)   // address
-					_, n = protocol.ReadShort(buf, n)    // port
-					nextstate, n := protocol.ReadUvarint(buf, n)
+					_, n := protocol.ReaVarint(buf, 0) // version
+					_, n = protocol.ReadString(buf, n) // address
+					_, n = protocol.ReadShort(buf, n)  // port
+					nextstate, n := protocol.ReaVarint(buf, n)
 					state = int(nextstate)
 				}
 			case 0x01: // Encryption Response, Ping Request
@@ -168,8 +168,9 @@ func (cc *GameConnection) HandleConnection() {
 
 					cc.Server.PlayerConnections[cc.Player.Uuid] = make(chan *protocol.Packet, 256)
 					cc.Player.EntityId = int64(len(cc.Server.PlayerConnections) + 1)
-					cc.Player.HeadY = 128
-					cc.Player.FeetY = 128 - 1.62
+					cc.Player.HeadY = 105
+					cc.Player.FeetY = 105 - 1.62
+					cc.Player.OnGround = true
 
 					cc.EntityServer, err = cc.Server.FindEntityServer(cc.Player)
 					if err != nil {

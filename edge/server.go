@@ -40,10 +40,63 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.PlayerListItemID, msg.Player.Username, true, int16(0))
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(msg.Player.Username+" joined the game", "yellow"))
 			if msg.Uuid != msg.Player.Uuid {
-				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.SpawnPlayerID, protocol.Varint{msg.Player.EntityId}, msg.Player.Uuid, msg.Player.Username, protocol.Varint{0}, int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch), int16(0), []byte{0x0, 0, 0x9, 0, 0x66}, float32(100), uint8(127))
+				metaData := []byte{0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x21, 0x01, 0x2c, 0x52, 0x00, 0x00, 0x00, 0x00, 0x66, 0x41, 0xa0, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x09, 0x00}
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.SpawnPlayerID,
+					protocol.Varint{uint64(msg.Player.EntityId)},
+					msg.Player.Uuid,
+					msg.Player.Username,
+					protocol.Varint{0},
+					int32(msg.Player.X*32),
+					int32(msg.Player.HeadY*32),
+					int32(msg.Player.Z*32),
+					byte(msg.Player.Yaw*256/2/math.Pi),
+					byte(msg.Player.Pitch*256/2/math.Pi),
+					int16(0),
+					metaData,
+					uint8(127),
+				)
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityMetadataID,
+					int32(msg.Player.EntityId),
+					metaData,
+					uint8(127),
+				)
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityPropertiesID,
+					int32(msg.Player.EntityId),
+					int32(2),
+					"generic.maxHealth",
+					float64(20),
+					int16(0),
+					"generic.movementSpeed",
+					float64(0.1),
+					int16(0),
+				)
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID,
+					int32(msg.Player.EntityId),
+					int32(msg.Player.X*32),
+					int32(msg.Player.HeadY*32),
+					int32(msg.Player.Z*32),
+					byte(msg.Player.Yaw*256/2/math.Pi),
+					byte(msg.Player.Pitch*256/2/math.Pi),
+				)
 			}
-		case protobuf.PlayerAction_MOVE:
-			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID, int32(msg.Player.EntityId), int32(msg.Player.X), int32(msg.Player.HeadY), int32(msg.Player.Z), byte(msg.Player.Yaw), byte(msg.Player.Pitch))
+		case protobuf.PlayerAction_MOVE_RELATIVE:
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityLookAndMoveID,
+				int32(msg.Player.EntityId),
+				byte(msg.Player.X*32),
+				byte(msg.Player.HeadY*32),
+				byte(msg.Player.Z*32),
+				byte(msg.Player.Yaw*256/2/math.Pi),
+				byte(msg.Player.Pitch*256/2/math.Pi),
+			)
+		case protobuf.PlayerAction_MOVE_ABSOLUTE:
+			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID,
+				int32(msg.Player.EntityId),
+				int32(msg.Player.X*32),
+				int32(msg.Player.HeadY*32),
+				int32(msg.Player.Z*32),
+				byte(msg.Player.Yaw*256/2/math.Pi),
+				byte(msg.Player.Pitch*256/2/math.Pi),
+			)
 		}
 	}
 }

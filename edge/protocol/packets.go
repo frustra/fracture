@@ -15,7 +15,11 @@ const (
 	SpawnPositionID         = 0x05
 	PlayerPositionAndLookID = 0x08
 	SpawnPlayerID           = 0x0C
+	EntityLookID            = 0x16
+	EntityLookAndMoveID     = 0x17
 	EntityTeleportID        = 0x18
+	EntityMetadataID        = 0x1C
+	EntityPropertiesID      = 0x20
 	MapChunkBulkID          = 0x26
 	PlayerListItemID        = 0x38
 	PlayerAbilitiesID       = 0x39
@@ -39,10 +43,6 @@ type RawPacket struct {
 }
 
 type Varint struct {
-	Val int64
-}
-
-type Uvarint struct {
 	Val uint64
 }
 
@@ -51,12 +51,6 @@ type Serializable interface {
 }
 
 func (v Varint) Bytes() []byte {
-	buf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(buf, v.Val)
-	return buf[0:n]
-}
-
-func (v Uvarint) Bytes() []byte {
 	buf := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(buf, v.Val)
 	return buf[0:n]
@@ -67,8 +61,8 @@ func CreatePacket(id uint64, v ...interface{}) *Packet {
 }
 
 func (p RawPacket) Serialize() []byte {
-	id := Uvarint{p.Id}.Bytes()
-	size := Uvarint{uint64(len(p.Buf) + len(id))}.Bytes()
+	id := Varint{p.Id}.Bytes()
+	size := Varint{uint64(len(p.Buf) + len(id))}.Bytes()
 	buf := make([]byte, len(p.Buf)+len(id)+len(size))
 
 	copy(buf, size)
@@ -80,7 +74,7 @@ func (p RawPacket) Serialize() []byte {
 
 func (p Packet) Serialize() []byte {
 	buf := new(bytes.Buffer) // TODO: buffer pool?
-	buf.Write(Uvarint{p.Id}.Bytes())
+	buf.Write(Varint{p.Id}.Bytes())
 
 	for j := 0; j < len(p.Fields); j++ {
 		_, err := serializeValueTo(buf, p.Fields[j])
@@ -89,7 +83,7 @@ func (p Packet) Serialize() []byte {
 		}
 	}
 
-	length := Uvarint{uint64(buf.Len())}
+	length := Varint{uint64(buf.Len())}
 	return append(length.Bytes(), buf.Bytes()...)
 }
 
@@ -103,7 +97,11 @@ func WriteNewPacket(conn io.Writer, id uint64, v ...interface{}) error {
 
 func WritePacket(conn io.Writer, p Serializable) error {
 	buf := p.Serialize()
-	// fmt.Println(hex.Dump(buf))
+	// _, x := ReaVarint(buf, 0)
+	// id, _ := ReaVarint(buf, x)
+	// if id != 0x00 && id != 0x26 {
+	// 	fmt.Printf("%x:\n%s\n", id, hex.Dump(buf[x+1:]))
+	// }
 	n := 0
 	for n < len(buf) {
 		n2, err := conn.Write(buf[n:])
@@ -207,7 +205,7 @@ func ReadFloat(buf []byte, start int) (float32, int) {
 
 func ReadDouble(buf []byte, start int) (float64, int) {
 	val, _ := ReadLong(buf, start)
-	return math.Float64frombits(uint64(val)), start + 4
+	return math.Float64frombits(uint64(val)), start + 8
 }
 
 func ReadBool(buf []byte, start int) (bool, int) {
@@ -215,18 +213,7 @@ func ReadBool(buf []byte, start int) (bool, int) {
 	return val != 0, start + 1
 }
 
-func ReadVarint(buf []byte, start int) (int64, int) {
-	if start < 0 || start >= len(buf) {
-		return 0, -1
-	}
-	result, n := binary.Varint(buf[start:])
-	if n <= 0 || start+n > len(buf) {
-		return 0, -1
-	}
-	return result, start + n
-}
-
-func ReadUvarint(buf []byte, start int) (uint64, int) {
+func ReaVarint(buf []byte, start int) (uint64, int) {
 	if start < 0 || start >= len(buf) {
 		return 0, -1
 	}

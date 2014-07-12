@@ -42,8 +42,8 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 					Username: player.Username,
 					EntityId: player.EntityId,
 					X:        0,
-					HeadY:    128,
-					FeetY:    128 - 1.62,
+					HeadY:    105,
+					FeetY:    105 - 1.62,
 					Z:        0,
 				},
 				Conn: conn,
@@ -57,9 +57,22 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 					Action: protobuf.PlayerAction_JOIN,
 					Uuid:   uuid,
 				})
+				if uuid != player.Uuid {
+					conn.SendMessage(&protobuf.PlayerAction{
+						Player: &p.Player,
+						Action: protobuf.PlayerAction_JOIN,
+						Uuid:   player.Uuid,
+					})
+				}
 			}
-		case protobuf.PlayerAction_MOVE:
+		case protobuf.PlayerAction_MOVE_ABSOLUTE:
+			responseType := protobuf.PlayerAction_MOVE_ABSOLUTE
+
 			tmp := s.Players[player.Uuid]
+			dx := player.X - tmp.X
+			dy := player.HeadY - tmp.HeadY
+			dz := player.Z - tmp.Z
+
 			tmp.X = player.X
 			tmp.HeadY = player.HeadY
 			tmp.FeetY = player.FeetY
@@ -69,18 +82,25 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 
 			for uuid, p := range s.Players {
 				if uuid != player.Uuid {
+					sendPlayer := protobuf.Player{
+						Uuid:     player.Uuid,
+						EntityId: player.EntityId,
+						Pitch:    player.Pitch,
+						Yaw:      player.Yaw,
+					}
+					if responseType == protobuf.PlayerAction_MOVE_ABSOLUTE {
+						sendPlayer.X = player.X
+						sendPlayer.HeadY = player.HeadY
+						sendPlayer.FeetY = player.FeetY
+						sendPlayer.Z = player.Z
+					} else {
+						sendPlayer.X = dx
+						sendPlayer.HeadY = dy
+						sendPlayer.Z = dz
+					}
 					p.Conn.SendMessage(&protobuf.PlayerAction{
-						Player: &protobuf.Player{
-							Uuid:     player.Uuid,
-							EntityId: player.EntityId,
-							X:        player.X,
-							HeadY:    player.HeadY,
-							FeetY:    player.FeetY,
-							Z:        player.Z,
-							Pitch:    player.Pitch,
-							Yaw:      player.Yaw,
-						},
-						Action: protobuf.PlayerAction_MOVE,
+						Player: &sendPlayer,
+						Action: responseType,
 						Uuid:   uuid,
 					})
 				}
