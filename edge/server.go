@@ -19,6 +19,7 @@ type ChunkCoord struct {
 
 type Server struct {
 	Addr    string
+	Offset  int64
 	Size    int
 	Cluster *network.Cluster
 
@@ -34,6 +35,8 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 	switch msg := message.(type) {
 	case *protobuf.ChunkResponse:
 		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.MapChunkBulkID, int16(1), int32(len(msg.Data)), true, msg.Data, int32(msg.X), int32(msg.Z), uint16(0xFFFF), uint16(0))
+	case *protobuf.ChatMessage:
+		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, msg.Message)
 	case *protobuf.PlayerAction:
 		switch msg.Action {
 		case protobuf.PlayerAction_JOIN:
@@ -85,15 +88,32 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				)
 			}
 		case protobuf.PlayerAction_MOVE_RELATIVE:
-			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityLookAndMoveID,
-				int32(msg.Player.EntityId),
-				byte(msg.Player.X*32),
-				byte(msg.Player.FeetY*32),
-				byte(msg.Player.Z*32),
-				byte(msg.Player.Yaw*256/360),
-				byte(msg.Player.Pitch*256/360),
-			)
-			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID, int32(msg.Player.EntityId), byte(msg.Player.Yaw*256/360))
+			if msg.Flags == 1 {
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityRelativeMoveID,
+					int32(msg.Player.EntityId),
+					byte(msg.Player.X*32),
+					byte(msg.Player.FeetY*32),
+					byte(msg.Player.Z*32),
+				)
+			} else if msg.Flags == 2 {
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityLookID,
+					int32(msg.Player.EntityId),
+					byte(msg.Player.Yaw*256/360),
+					byte(msg.Player.Pitch*256/360),
+				)
+			} else if msg.Flags == 3 {
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityLookAndMoveID,
+					int32(msg.Player.EntityId),
+					byte(msg.Player.X*32),
+					byte(msg.Player.FeetY*32),
+					byte(msg.Player.Z*32),
+					byte(msg.Player.Yaw*256/360),
+					byte(msg.Player.Pitch*256/360),
+				)
+			}
+			if msg.Flags&2 == 2 {
+				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityHeadLookID, int32(msg.Player.EntityId), byte(msg.Player.Yaw*256/360))
+			}
 		case protobuf.PlayerAction_MOVE_ABSOLUTE:
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityTeleportID,
 				int32(msg.Player.EntityId),
@@ -157,7 +177,7 @@ func (s *Server) NodePort() int {
 }
 
 func (s *Server) GetMinecraftStatus() protocol.StatusResponse {
-	statusMessage := protocol.CreateJsonMessage("Fracture Distributed Server", "green")
+	statusMessage := protocol.JsonMessage{"Fracture Distributed Server", "green", false, false, false, false, false}
 	return protocol.CreateStatusResponse("1.7.10", protocol.Version, 0, s.Size, statusMessage)
 }
 

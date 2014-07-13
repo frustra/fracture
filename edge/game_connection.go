@@ -47,9 +47,10 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 		} else if id == 0x01 {
 			message, _ := protocol.ReadString(buf, 0)
 			if len(message) > 0 && message[0] != '/' {
-				for _, conn := range cc.Server.PlayerConnections {
-					conn <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage("<"+cc.Player.Username+"> "+message, ""))
-				}
+				cc.EntityServer.SendMessage(&protobuf.ChatMessage{
+					Message: message,
+					Uuid:    cc.Player.Uuid,
+				})
 			}
 		} else if id == 0x04 {
 			cc.Player.X, n = protocol.ReadDouble(buf, n)
@@ -61,6 +62,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
 				Player: cc.Player,
 				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
+				Flags:  1,
 			})
 		} else if id == 0x05 {
 			cc.Player.Yaw, n = protocol.ReadFloat(buf, n)
@@ -70,6 +72,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
 				Player: cc.Player,
 				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
+				Flags:  2,
 			})
 		} else if id == 0x06 {
 			cc.Player.X, n = protocol.ReadDouble(buf, n)
@@ -83,6 +86,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			cc.EntityServer.SendMessage(&protobuf.PlayerAction{
 				Player: cc.Player,
 				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
+				Flags:  3,
 			})
 		} else if id == 0x07 {
 			status, n := protocol.ReadByte(buf, n)
@@ -111,13 +115,11 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 func (cc *GameConnection) HandleNewConnection() {
 	defer func() {
 		delete(cc.Server.PlayerConnections, cc.Player.Uuid)
-		delete(cc.Server.Clients, cc)
 		cc.EntityServer = nil
-		cc.Conn.Close()
 	}()
 
 	cc.Server.PlayerConnections[cc.Player.Uuid] = make(chan *protocol.Packet, 256)
-	cc.Player.EntityId = int64(len(cc.Server.PlayerConnections) + 1)
+	cc.Player.EntityId = int64(len(cc.Server.PlayerConnections)+1) + cc.Server.Offset
 	cc.Player.HeadY = 105
 	cc.Player.FeetY = 105 - 1.62
 	cc.Player.OnGround = true

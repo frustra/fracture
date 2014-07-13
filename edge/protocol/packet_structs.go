@@ -14,6 +14,11 @@ type JsonMessage struct {
 	Obfuscated bool   `json:"obfuscated,omitempty"`
 }
 
+func (jm JsonMessage) String() string {
+	buf, _ := json.Marshal(jm)
+	return string(buf)
+}
+
 func (jm JsonMessage) Serialize() []byte {
 	buf, err := json.Marshal(jm)
 	if err != nil {

@@ -21,8 +21,9 @@ func main() {
 		node     = flag.String("node", ":7946", "node address within the cluster")
 
 		// Edge server flags.
-		addr    = flag.String("addr", ":25565", "address to bind")
-		players = flag.Int("size", 16, "max players")
+		addr   = flag.String("addr", ":25565", "address to bind")
+		offset = flag.Int64("offset", 0, "id range offset")
+		size   = flag.Int("size", 16, "server size")
 
 		// Chunk server flags.
 		x = flag.Int64("x", 0, "x offset")
@@ -42,10 +43,10 @@ func main() {
 
 	switch role {
 	case "edge":
-		server = &edge.Server{Addr: *addr, Cluster: cluster, Size: *players}
+		server = &edge.Server{Addr: *addr, Cluster: cluster, Size: *size, Offset: *offset}
 
 	case "entity":
-		server = &entity.Server{Addr: *addr, Cluster: cluster, Size: *players}
+		server = &entity.Server{Addr: *addr, Cluster: cluster, Size: *size}
 
 	case "chunk":
 		*x *= chunk.ChunkWidthPerNode

@@ -9,12 +9,13 @@ It is generated from these files:
 	block_update.proto
 	bulk_chunk_request.proto
 	bulk_chunk_response.proto
+	chat_message.proto
 	chunk_request.proto
 	chunk_response.proto
 	internal_message.proto
 	node_meta.proto
-	player.proto
 	player_action.proto
+	player.proto
 
 It has these top-level messages:
 	BlockUpdate

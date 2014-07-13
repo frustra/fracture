@@ -58,6 +58,7 @@ type PlayerAction struct {
 	Player           *Player             `protobuf:"bytes,1,req,name=player" json:"player,omitempty"`
 	Action           PlayerAction_Action `protobuf:"varint,2,req,name=action,enum=protobuf.PlayerAction_Action" json:"action"`
 	Uuid             string              `protobuf:"bytes,3,opt,name=uuid" json:"uuid"`
+	Flags            int32               `protobuf:"varint,4,opt,name=flags" json:"flags"`
 	XXX_unrecognized []byte              `json:"-"`
 }
 
@@ -84,6 +85,13 @@ func (m *PlayerAction) GetUuid() string {
 		return m.Uuid
 	}
 	return ""
+}
+
+func (m *PlayerAction) GetFlags() int32 {
+	if m != nil {
+		return m.Flags
+	}
+	return 0
 }
 
 func init() {

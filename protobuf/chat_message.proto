@@ -1,0 +1,9 @@
+package protobuf;
+
+import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
+
+message ChatMessage {
+	required string message = 1 [(gogoproto.nullable) = false];
+	required string uuid = 3 [(gogoproto.nullable) = false];
+}
+

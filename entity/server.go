@@ -6,6 +6,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
 )
@@ -36,6 +37,16 @@ func (s *Server) Serve() error {
 
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
 	switch req := message.(type) {
+	case *protobuf.ChatMessage:
+		player := s.Players[req.Uuid]
+		message := protocol.CreateJsonMessage("<"+player.Username+"> "+req.Message, "")
+		log.Printf("Chat: %s", message.Message)
+		for uuid, p := range s.Players {
+			p.Conn.SendMessage(&protobuf.ChatMessage{
+				Message: message.String(),
+				Uuid:    uuid,
+			})
+		}
 	case *protobuf.PlayerAction:
 		player, action := req.GetPlayer(), req.GetAction()
 		switch action {
@@ -56,7 +67,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				Conn:  conn,
 			}
 
-			log.Printf("Player joined: %s", player.Username)
+			log.Printf("Player joined (%d): %s", player.EntityId, player.Username)
 
 			for uuid, p := range s.Players {
 				p.Conn.SendMessage(&protobuf.PlayerAction{
@@ -76,55 +87,70 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 			responseType := protobuf.PlayerAction_MOVE_RELATIVE
 
 			tmp := s.Players[player.Uuid]
-			if math.Abs(player.X-tmp.LastX) > 3 ||
-				math.Abs(player.FeetY-tmp.LastY) > 3 ||
-				math.Abs(player.Z-tmp.LastZ) > 3 {
-				responseType = protobuf.PlayerAction_MOVE_ABSOLUTE
-				tmp.LastX = player.X
-				tmp.LastY = player.FeetY
-				tmp.LastZ = player.Z
+			if req.Flags&1 == 1 {
+				if math.Abs(player.X-tmp.LastX) > 3 ||
+					math.Abs(player.FeetY-tmp.LastY) > 3 ||
+					math.Abs(player.Z-tmp.LastZ) > 3 {
+					responseType = protobuf.PlayerAction_MOVE_ABSOLUTE
+					tmp.LastX = player.X
+					tmp.LastY = player.FeetY
+					tmp.LastZ = player.Z
+				}
 			}
 
 			for uuid, p := range s.Players {
 				if uuid != player.Uuid {
 					sendPlayer := protobuf.Player{
 						Uuid:     player.Uuid,
-						EntityId: player.EntityId,
-						Pitch:    player.Pitch,
-						Yaw:      player.Yaw,
+						EntityId: tmp.EntityId,
 					}
 					if responseType == protobuf.PlayerAction_MOVE_ABSOLUTE {
 						sendPlayer.X = player.X
 						sendPlayer.HeadY = player.HeadY
 						sendPlayer.FeetY = player.FeetY
 						sendPlayer.Z = player.Z
-					} else {
+					} else if req.Flags&1 == 1 {
 						sendPlayer.X = player.X - tmp.X
 						sendPlayer.FeetY = player.FeetY - tmp.FeetY
 						sendPlayer.Z = player.Z - tmp.Z
+					}
+					if req.Flags&2 == 2 {
+						sendPlayer.Pitch = player.Pitch
+						sendPlayer.Yaw = player.Yaw
 					}
 					p.Conn.SendMessage(&protobuf.PlayerAction{
 						Player: &sendPlayer,
 						Action: responseType,
 						Uuid:   uuid,
+						Flags:  req.Flags,
 					})
 				}
 			}
 
-			tmp.X = player.X
-			tmp.HeadY = player.HeadY
-			tmp.FeetY = player.FeetY
-			tmp.Z = player.Z
-			tmp.Pitch = player.Pitch
-			tmp.Yaw = player.Yaw
+			if req.Flags&1 == 1 {
+				tmp.X = player.X
+				tmp.HeadY = player.HeadY
+				tmp.FeetY = player.FeetY
+				tmp.Z = player.Z
+			}
+			if req.Flags&2 == 2 {
+				tmp.Pitch = player.Pitch
+				tmp.Yaw = player.Yaw
+			}
 		case protobuf.PlayerAction_LEAVE:
+			tmp := s.Players[player.Uuid]
 			delete(s.Players, player.Uuid)
 
-			log.Printf("Player left: %s", player.Username)
+			log.Printf("Player left: %s", tmp.Username)
 
 			for uuid, p := range s.Players {
+				sendPlayer := protobuf.Player{
+					Uuid:     player.Uuid,
+					Username: tmp.Username,
+					EntityId: tmp.EntityId,
+				}
 				p.Conn.SendMessage(&protobuf.PlayerAction{
-					Player: &protobuf.Player{Uuid: player.Uuid, Username: player.Username, EntityId: player.EntityId},
+					Player: &sendPlayer,
 					Action: protobuf.PlayerAction_LEAVE,
 					Uuid:   uuid,
 				})

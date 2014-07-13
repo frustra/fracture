@@ -7,6 +7,7 @@ import "bulk_chunk_request.proto";
 import "bulk_chunk_response.proto";
 import "player_action.proto";
 import "block_update.proto";
+import "chat_message.proto";
 
 message InternalMessage {
 	option (gogoproto.onlyone) = true;
@@ -16,4 +17,5 @@ message InternalMessage {
 	optional BulkChunkResponse BulkChunkResponse = 4;
 	optional PlayerAction PlayerAction = 5;
 	optional BlockUpdate BlockUpdate = 6;
+	optional ChatMessage ChatMessage = 7;
 }

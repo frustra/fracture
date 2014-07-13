@@ -11,6 +11,10 @@ import (
 )
 
 func (cc *GameConnection) HandleAuth() {
+	defer func() {
+		delete(cc.Server.Clients, cc)
+		cc.Conn.Close()
+	}()
 	remoteAddr := cc.Conn.RemoteAddr().String()
 
 	state := 0
@@ -91,6 +95,7 @@ func (cc *GameConnection) HandleAuth() {
 				}
 			default:
 				log.Printf("Unknown Packet (state:%d): 0x%X : %s", state, id, hex.Dump(buf))
+				return
 			}
 		}
 	}
