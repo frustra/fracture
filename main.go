@@ -46,6 +46,8 @@ func main() {
 		server = &entity.Server{Addr: *addr, Cluster: cluster, Size: *players}
 
 	case "chunk":
+		*x *= chunk.ChunkWidthPerNode
+		*z *= chunk.ChunkWidthPerNode
 		chunkServer := &chunk.Server{Addr: *addr, Cluster: cluster, OffsetX: *x, OffsetZ: *z}
 		cluster.LocalNodeMeta.X = &chunkServer.OffsetX
 		cluster.LocalNodeMeta.Z = &chunkServer.OffsetZ
