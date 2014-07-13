@@ -201,7 +201,7 @@ func (cc *GameConnection) HandleConnection() {
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.LoginSuccessID, cc.Player.Uuid, cc.Player.Username)
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.JoinGameID, int32(cc.Player.EntityId), uint8(1), byte(0), uint8(1), uint8(cc.Server.Size), "default")
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.SpawnPositionID, int32(0), int32(128), int32(0))
-					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerAbilitiesID, byte(1), float32(5), float32(5))
+					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerAbilitiesID, byte(1), float32(0.05), float32(0.1))
 					protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PlayerPositionAndLookID, cc.Player.X, cc.Player.HeadY, cc.Player.Z, cc.Player.Yaw, cc.Player.Pitch, cc.Player.OnGround)
 
 					go cc.Server.DrainPlayerConnections(cc)
