@@ -39,6 +39,7 @@ func (s *Server) Serve() error {
 
 	s.blockUpdateChannel = make(chan *protobuf.BlockUpdate)
 	go s.Loop()
+
 	return network.ServeInternal(s.Addr, s)
 }
 
