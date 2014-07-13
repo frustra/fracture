@@ -40,11 +40,11 @@ func (s *Server) Serve() error {
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
 	switch req := message.(type) {
 	case *protobuf.ChunkRequest:
-		x, z := req.GetX()-s.OffsetX, req.GetZ()-s.OffsetZ
+		x, z := req.X-s.OffsetX, req.Z-s.OffsetZ
 
 		res := &protobuf.ChunkResponse{
-			X:    req.GetX(),
-			Z:    req.GetZ(),
+			X:    req.X,
+			Z:    req.Z,
 			Uuid: req.Uuid,
 		}
 
@@ -55,6 +55,24 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 		}
 
 		conn.SendMessage(res)
+	case *protobuf.BlockUpdate:
+		cx, cz := WorldCoordsToChunk(req.X, req.Z)
+		cx -= s.OffsetX
+		cz -= s.OffsetZ
+
+		if cx < 0 || cz < 0 || cx >= ChunkWidthPerNode || cz >= ChunkWidthPerNode {
+			log.Printf("Received block update for someone else's chunk: %#v", req)
+		} else {
+			chunk := s.Storage[cz][cx]
+			x, z := WorldCoordsToChunkInternal(req.X, req.Z)
+			y := req.Y
+
+			if req.Destroy {
+				chunk.Set(int(x), int(y), int(z), 0)
+			} else {
+				panic("unimplemented")
+			}
+		}
 	}
 }
 

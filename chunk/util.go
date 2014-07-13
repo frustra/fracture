@@ -23,3 +23,15 @@ func WorldCoordsToChunk(x, z int64) (cx, cz int64) {
 	cz = z / BlockZSize
 	return cx, cz
 }
+
+func WorldCoordsToChunkInternal(x, z int64) (cx, cz int64) {
+	cx = x % BlockXSize
+	cz = z % BlockZSize
+	if cx < 0 {
+		cx += BlockXSize
+	}
+	if cz < 0 {
+		cz += BlockZSize
+	}
+	return cx, cz
+}

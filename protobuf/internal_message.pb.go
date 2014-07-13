@@ -21,6 +21,7 @@ type InternalMessage struct {
 	BulkChunkRequest  *BulkChunkRequest  `protobuf:"bytes,3,opt" json:"BulkChunkRequest,omitempty"`
 	BulkChunkResponse *BulkChunkResponse `protobuf:"bytes,4,opt" json:"BulkChunkResponse,omitempty"`
 	PlayerAction      *PlayerAction      `protobuf:"bytes,5,opt" json:"PlayerAction,omitempty"`
+	BlockUpdate       *BlockUpdate       `protobuf:"bytes,6,opt" json:"BlockUpdate,omitempty"`
 	XXX_unrecognized  []byte             `json:"-"`
 }
 
@@ -63,6 +64,13 @@ func (m *InternalMessage) GetPlayerAction() *PlayerAction {
 	return nil
 }
 
+func (m *InternalMessage) GetBlockUpdate() *BlockUpdate {
+	if m != nil {
+		return m.BlockUpdate
+	}
+	return nil
+}
+
 func init() {
 }
 func (this *InternalMessage) GetValue() interface{} {
@@ -81,6 +89,9 @@ func (this *InternalMessage) GetValue() interface{} {
 	if this.PlayerAction != nil {
 		return this.PlayerAction
 	}
+	if this.BlockUpdate != nil {
+		return this.BlockUpdate
+	}
 	return nil
 }
 
@@ -96,6 +107,8 @@ func (this *InternalMessage) SetValue(value interface{}) bool {
 		this.BulkChunkResponse = vt
 	case *PlayerAction:
 		this.PlayerAction = vt
+	case *BlockUpdate:
+		this.BlockUpdate = vt
 	default:
 		return false
 	}

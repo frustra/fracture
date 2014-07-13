@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/frustra/fracture/chunk"
 	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
@@ -90,6 +91,18 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			z, n := protocol.ReadInt(buf, n)
 			face, n := protocol.ReadByte(buf, n)
 
+			chunkServer, err := cc.Server.FindChunkServer(chunk.WorldCoordsToChunk(int64(x), int64(z)))
+			if err != nil {
+				log.Print("Tried to destroy block on missing chunk server: ", err)
+			}
+
+			chunkServer.SendMessage(&protobuf.BlockUpdate{
+				X:       int64(x),
+				Y:       uint32(y),
+				Z:       int64(z),
+				Destroy: true,
+				Uuid:    cc.Player.Uuid,
+			})
 			log.Printf("digging block %d, %d, %d - status %d - face %d", x, y, z, status, face)
 		}
 	}

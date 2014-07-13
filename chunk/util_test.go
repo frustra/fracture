@@ -45,3 +45,24 @@ func TestWorldCoordsToChunk(t *testing.T) {
 		}
 	}
 }
+
+var worldToChunkInternalTests = map[int64]int64{
+	0:   0,
+	15:  15,
+	16:  0,
+	22:  6,
+	-1:  15,
+	-15: 1,
+	-16: 0,
+	-17: 15,
+}
+
+func TestWorldCoordsToChunkInternal(t *testing.T) {
+	for m, expected := range worldToChunkInternalTests {
+		got1, got2 := WorldCoordsToChunkInternal(m, m)
+
+		if got1 != got2 || got1 != expected {
+			t.Errorf("       got: %d, %d\n  expected: %d, %d", got1, got2, expected, expected)
+		}
+	}
+}
