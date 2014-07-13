@@ -14,7 +14,7 @@ const (
 	BlockXSize      = 16 // X blocks per chunk
 	BlockZSize      = 16 // Z blocks per chunk
 	BlockArraySize  = BlockHeight * BlockYSize * BlockZSize * BlockXSize
-	TotalBlockYSize = BlockYSize * BlockHeight
+	TotalBlockYSize = int64(BlockYSize * BlockHeight)
 )
 
 // A Chunk column really.
@@ -34,11 +34,11 @@ func NewChunk(offsetX, offsetZ int64) *Chunk {
 	}
 }
 
-func indexOf(x, y, z int) int {
-	return y*BlockZSize*BlockXSize + z*BlockXSize + x
+func indexOf(x, y, z int64) int {
+	return int(y*BlockZSize*BlockXSize + z*BlockXSize + x)
 }
 
-func setInHalfArray(arr []byte, x, y, z int, val byte) {
+func setInHalfArray(arr []byte, x, y, z int64, val byte) {
 	index := indexOf(x, y, z)
 	shift := uint(index%2) * 4
 	index /= 2
@@ -46,19 +46,19 @@ func setInHalfArray(arr []byte, x, y, z int, val byte) {
 	arr[index] = (arr[index] & (0xf0 >> shift)) | (val << shift)
 }
 
-func (c *Chunk) Set(x, y, z int, val byte) {
+func (c *Chunk) Set(x, y, z int64, val byte) {
 	c.BlockTypes[indexOf(x, y, z)] = val
 }
 
-func (c *Chunk) Get(x, y, z int) byte {
+func (c *Chunk) Get(x, y, z int64) byte {
 	return c.BlockTypes[indexOf(x, y, z)]
 }
 
-func (c *Chunk) SetBlockLight(x, y, z int, val byte) {
+func (c *Chunk) SetBlockLight(x, y, z int64, val byte) {
 	setInHalfArray(c.BlockLight[:], x, y, z, val)
 }
 
-func (c *Chunk) SetSkyLight(x, y, z int, val byte) {
+func (c *Chunk) SetSkyLight(x, y, z int64, val byte) {
 	setInHalfArray(c.SkyLight[:], x, y, z, val)
 }
 
@@ -71,15 +71,15 @@ func (c *Chunk) Clear() {
 func (c *Chunk) Generate(blockType byte) {
 	noise := perlin.NewNoise2D(0)
 
-	for z := 0; z < BlockZSize; z++ {
-		for x := 0; x < BlockXSize; x++ {
-			absx, absz := float64(x+int(c.OffsetX*BlockXSize)), float64(z+int(c.OffsetZ*BlockZSize))
+	for z := int64(0); z < BlockZSize; z++ {
+		for x := int64(0); x < BlockXSize; x++ {
+			absx, absz := float64(x+c.OffsetX*BlockXSize), float64(z+c.OffsetZ*BlockZSize)
 			r := noise.At(absx/70, absz/70) + 0.8
 			r += (noise.At(absx/20, absz/20) + 0.6) / 3
 
-			height := int(r * 16 * 3)
+			height := int64(r * 16 * 3)
 
-			for y := 0; y < height; y++ {
+			for y := int64(0); y < height; y++ {
 				c.Set(x, y, z, 3)
 			}
 			for y := height; y < 42; y++ {
@@ -89,24 +89,32 @@ func (c *Chunk) Generate(blockType byte) {
 		}
 	}
 
-	for z := 0; z < BlockZSize; z++ {
-		for x := 0; x < BlockXSize; x++ {
-			var light byte = 15
-			for y := TotalBlockYSize - 1; y >= 0; y-- {
-				c.SetSkyLight(x, y, z, light)
+	c.CalculateLighting()
+}
 
-				if light == 0 {
-					continue
-				}
+func (c *Chunk) CalculateLighting() {
+	for z := int64(0); z < BlockZSize; z++ {
+		for x := int64(0); x < BlockXSize; x++ {
+			c.CalculateSkyLightingForColumn(x, z)
+		}
+	}
+}
 
-				block := c.Get(x, y, z)
-				if block != 0 {
-					if block == 9 { // Transparent.
-						light--
-					} else { // Opaque.
-						light = 0
-					}
-				}
+func (c *Chunk) CalculateSkyLightingForColumn(x, z int64) {
+	var light byte = 15
+	for y := TotalBlockYSize - 1; y >= 0; y-- {
+		c.SetSkyLight(x, y, z, light)
+
+		if light == 0 {
+			continue
+		}
+
+		block := c.Get(x, y, z)
+		if block != 0 {
+			if block == 9 { // Transparent.
+				light--
+			} else { // Opaque.
+				light = 0
 			}
 		}
 	}

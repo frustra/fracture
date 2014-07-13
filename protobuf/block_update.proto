@@ -1,0 +1,12 @@
+package protobuf;
+
+import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
+
+message BlockUpdate {
+	required sint64 x = 1 [(gogoproto.nullable) = false];
+	required uint32 y = 2 [(gogoproto.nullable) = false];
+	required sint64 z = 3 [(gogoproto.nullable) = false];
+	optional bool destroy = 4 [(gogoproto.nullable) = false];
+	optional string uuid = 5 [(gogoproto.nullable) = false];
+}
+
