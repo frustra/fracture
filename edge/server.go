@@ -144,7 +144,7 @@ func (s *Server) Serve() error {
 			Player: &protobuf.Player{},
 		}
 		s.Clients[client] = true
-		go client.HandleConnection()
+		go client.HandleAuth()
 	}
 }
 
@@ -154,6 +154,11 @@ func (s *Server) NodeType() string {
 
 func (s *Server) NodePort() int {
 	return 0
+}
+
+func (s *Server) GetMinecraftStatus() protocol.StatusResponse {
+	statusMessage := protocol.CreateJsonMessage("Fracture Distributed Server", "green")
+	return protocol.CreateStatusResponse("1.7.10", protocol.Version, 0, s.Size, statusMessage)
 }
 
 func (s *Server) DrainPlayerConnections(cc *GameConnection) {

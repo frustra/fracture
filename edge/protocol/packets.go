@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	Version = 5
+
 	KeepAliveID             = 0x00
 	JoinGameID              = 0x01
 	ChatMessageID           = 0x02
@@ -99,8 +101,8 @@ func WriteNewPacket(conn io.Writer, id uint64, v ...interface{}) error {
 
 func WritePacket(conn io.Writer, p Serializable) error {
 	buf := p.Serialize()
-	// _, x := ReaVarint(buf, 0)
-	// id, _ := ReaVarint(buf, x)
+	// _, x := ReadVarint(buf, 0)
+	// id, _ := ReadVarint(buf, x)
 	// if id != 0x00 && id != 0x26 {
 	// 	fmt.Printf("%x:\n%s\n", id, hex.Dump(buf[x+1:]))
 	// }
@@ -215,7 +217,7 @@ func ReadBool(buf []byte, start int) (bool, int) {
 	return val != 0, start + 1
 }
 
-func ReaVarint(buf []byte, start int) (uint64, int) {
+func ReadVarint(buf []byte, start int) (uint64, int) {
 	if start < 0 || start >= len(buf) {
 		return 0, -1
 	}
