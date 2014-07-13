@@ -6,5 +6,6 @@ goprotobuf:
 deps:
 	# OS X: brew install protobuf
 	# ArchLinux: pacman -S protobuf
-	go get -u code.google.com/p/gogoprotobuf/{proto,protoc-gen-gogo,gogoproto}
+	go get -u code.google.com/p/gogoprotobuf/gogoproto
+	go get -u code.google.com/p/gogoprotobuf/protoc-gen-gogo
 	go get -u ./...
