@@ -104,10 +104,60 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 				X:       int64(x),
 				Y:       uint32(y),
 				Z:       int64(z),
-				Destroy: true,
+				BlockId: 0,
 				Uuid:    cc.Player.Uuid,
 			})
 			log.Printf("digging block %d, %d, %d - status %d - face %d", x, y, z, status, face)
+		} else if id == 0x08 {
+			x, n := protocol.ReadInt(buf, n)
+			y, n := protocol.ReadByte(buf, n)
+			z, n := protocol.ReadInt(buf, n)
+			face, n := protocol.ReadByte(buf, n)
+			blockId, n := protocol.ReadShort(buf, n)
+			quantity, n := protocol.ReadByte(buf, n)
+			damage, n := protocol.ReadShort(buf, n)
+			nbtLen, n := protocol.ReadShort(buf, n)
+
+			if nbtLen > 0 {
+				n += nbtLen
+			}
+
+			cursorX, n := protocol.ReadByte(buf, n)
+			cursorY, n := protocol.ReadByte(buf, n)
+			cursorZ, n := protocol.ReadByte(buf, n)
+
+			if blockId > 0 && blockId < 256 && face < 6 {
+				chunkServer, err := cc.Server.FindChunkServer(chunk.WorldCoordsToChunk(int64(x), int64(z)))
+				if err != nil {
+					log.Print("Tried to destroy block on missing chunk server: ", err)
+				}
+
+				switch face {
+				case 0:
+					y--
+				case 1:
+					y++
+				case 2:
+					z--
+				case 3:
+					z++
+				case 4:
+					x--
+				case 5:
+					x++
+				}
+
+				chunkServer.SendMessage(&protobuf.BlockUpdate{
+					X:             int64(x),
+					Y:             uint32(y),
+					Z:             int64(z),
+					BlockId:       int32(blockId),
+					BlockMetadata: int32(damage),
+					Uuid:          cc.Player.Uuid,
+				})
+			}
+
+			log.Printf("right clicked %d, %d, %d - face %d, blockId %d, quantity %d, damage %d, curX %d, curY %d, curZ %d", x, y, z, face, blockId, quantity, damage, cursorX, cursorY, cursorZ)
 		}
 	}
 }

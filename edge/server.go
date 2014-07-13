@@ -37,6 +37,8 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.MapChunkBulkID, int16(1), int32(len(msg.Data)), true, msg.Data, int32(msg.X), int32(msg.Z), uint16(0xFFFF), uint16(0))
 	case *protobuf.ChatMessage:
 		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, msg.Message)
+	case *protobuf.BlockUpdate:
+		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.BlockChangeID, int32(msg.X), uint8(msg.Y), int32(msg.Z), msg.BlockId, msg.BlockMetadata)
 	case *protobuf.PlayerAction:
 		switch msg.Action {
 		case protobuf.PlayerAction_JOIN:

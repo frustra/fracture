@@ -47,6 +47,17 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 				Uuid:    uuid,
 			})
 		}
+	case *protobuf.BlockUpdate:
+		for uuid, p := range s.Players {
+			p.Conn.SendMessage(&protobuf.BlockUpdate{
+				X:             req.X,
+				Y:             req.Y,
+				Z:             req.Z,
+				BlockId:       req.BlockId,
+				BlockMetadata: req.BlockMetadata,
+				Uuid:          uuid,
+			})
+		}
 	case *protobuf.PlayerAction:
 		player, action := req.GetPlayer(), req.GetAction()
 		switch action {

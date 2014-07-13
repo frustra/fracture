@@ -16,6 +16,7 @@ It is generated from these files:
 	node_meta.proto
 	player_action.proto
 	player.proto
+	subscribe.proto
 
 It has these top-level messages:
 	BlockUpdate
@@ -37,8 +38,9 @@ type BlockUpdate struct {
 	X                int64  `protobuf:"zigzag64,1,req,name=x" json:"x"`
 	Y                uint32 `protobuf:"varint,2,req,name=y" json:"y"`
 	Z                int64  `protobuf:"zigzag64,3,req,name=z" json:"z"`
-	Destroy          bool   `protobuf:"varint,4,opt,name=destroy" json:"destroy"`
-	Uuid             string `protobuf:"bytes,5,opt,name=uuid" json:"uuid"`
+	BlockId          int32  `protobuf:"varint,4,opt,name=blockId" json:"blockId"`
+	BlockMetadata    int32  `protobuf:"varint,5,opt,name=blockMetadata" json:"blockMetadata"`
+	Uuid             string `protobuf:"bytes,6,opt,name=uuid" json:"uuid"`
 	XXX_unrecognized []byte `json:"-"`
 }
 
@@ -67,11 +69,18 @@ func (m *BlockUpdate) GetZ() int64 {
 	return 0
 }
 
-func (m *BlockUpdate) GetDestroy() bool {
+func (m *BlockUpdate) GetBlockId() int32 {
 	if m != nil {
-		return m.Destroy
+		return m.BlockId
 	}
-	return false
+	return 0
+}
+
+func (m *BlockUpdate) GetBlockMetadata() int32 {
+	if m != nil {
+		return m.BlockMetadata
+	}
+	return 0
 }
 
 func (m *BlockUpdate) GetUuid() string {

@@ -54,6 +54,10 @@ func (c *Chunk) Get(x, y, z int64) byte {
 	return c.BlockTypes[indexOf(x, y, z)]
 }
 
+func (c *Chunk) SetMetadata(x, y, z int64, val byte) {
+	setInHalfArray(c.BlockMeta[:], x, y, z, val)
+}
+
 func (c *Chunk) SetBlockLight(x, y, z int64, val byte) {
 	setInHalfArray(c.BlockLight[:], x, y, z, val)
 }

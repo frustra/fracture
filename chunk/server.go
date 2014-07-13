@@ -18,6 +18,7 @@ type Server struct {
 	Cluster *network.Cluster
 
 	OffsetX, OffsetZ int64
+	Listeners        map[*network.InternalConnection]bool
 
 	storage [ChunkWidthPerNode][ChunkWidthPerNode]*Chunk // [z][x]
 
@@ -26,6 +27,8 @@ type Server struct {
 
 func (s *Server) Serve() error {
 	log.Printf("Chunk server (%d, %d) loading on %s\n", s.OffsetX, s.OffsetZ, s.Addr)
+
+	s.Listeners = make(map[*network.InternalConnection]bool)
 
 	blockType := byte(((s.OffsetX+8)/8+(s.OffsetZ+8)/4)%4 + 1)
 
@@ -58,12 +61,13 @@ func (s *Server) Loop() {
 				x, z := WorldCoordsToChunkInternal(update.X, update.Z)
 				y := update.Y
 
-				if update.Destroy {
-					chunk.Set(x, int64(y), z, 0)
-				} else {
-					panic("unimplemented")
-				}
+				chunk.Set(x, int64(y), z, byte(update.BlockId))
+				chunk.SetMetadata(x, int64(y), z, byte(update.BlockMetadata))
 				chunk.CalculateSkyLightingForColumn(x, z)
+
+				for conn, _ := range s.Listeners {
+					conn.SendMessage(update)
+				}
 			}
 		}
 	}
@@ -71,6 +75,8 @@ func (s *Server) Loop() {
 
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
 	switch req := message.(type) {
+	case *protobuf.Subscribe:
+		s.Listeners[conn] = true
 	case *protobuf.ChunkRequest:
 		x, z := req.X-s.OffsetX, req.Z-s.OffsetZ
 
