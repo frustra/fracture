@@ -205,11 +205,11 @@ func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalCon
 	if closestServer != nil {
 		return closestServer, nil
 	} else {
-		entityServers := s.Cluster.MetaLookup["entity"]
+		entityServers := s.Cluster.Entity
 		serverRange := make([]string, len(entityServers))
 		i := 0
-		for _, meta := range entityServers {
-			serverRange[i] = meta.GetAddr()
+		for _, node := range entityServers {
+			serverRange[i] = node.Meta.Addr
 			i++
 		}
 		if i > 0 {
@@ -229,10 +229,10 @@ func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error
 		return conn, nil
 	}
 
-	chunkServers := s.Cluster.MetaLookup["chunk"]
-	for _, meta := range chunkServers {
-		if *meta.X == x && *meta.Z == z {
-			conn, err := network.ConnectInternal(meta.GetAddr(), s)
+	chunkServers := s.Cluster.Chunk
+	for _, node := range chunkServers {
+		if *node.Meta.X == x && *node.Meta.Z == z {
+			conn, err := network.ConnectInternal(node.Meta.Addr, s)
 			if err != nil {
 				return nil, err
 			}

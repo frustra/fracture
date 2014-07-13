@@ -14,6 +14,26 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+type Node struct {
+	Meta       *protobuf.NodeMeta
+	Connection *InternalConnection
+}
+
+type NodeMap map[string]*Node
+
+type Cluster struct {
+	Members *memberlist.Memberlist
+	config  *memberlist.Config
+
+	existing string
+
+	LocalNodeMeta  protobuf.NodeMeta
+	nodeMetaBuffer []byte
+
+	Edge, Entity, Chunk NodeMap
+	TypeLookup          map[string]NodeMap
+}
+
 func CreateCluster(addr, existing string) (*Cluster, error) {
 	host, portString, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -36,8 +56,10 @@ func CreateCluster(addr, existing string) (*Cluster, error) {
 	c := &Cluster{
 		config:     config,
 		existing:   existing,
-		MetaLookup: make(map[string]map[string]*protobuf.NodeMeta),
-		TypeLookup: make(map[string]string),
+		Edge:       make(NodeMap),
+		Entity:     make(NodeMap),
+		Chunk:      make(NodeMap),
+		TypeLookup: make(map[string]NodeMap),
 	}
 
 	config.Delegate = c
@@ -46,19 +68,6 @@ func CreateCluster(addr, existing string) (*Cluster, error) {
 	config.Name = uuid.New()
 
 	return c, nil
-}
-
-type Cluster struct {
-	Members *memberlist.Memberlist
-	config  *memberlist.Config
-
-	existing string
-
-	LocalNodeMeta  protobuf.NodeMeta
-	nodeMetaBuffer []byte
-
-	MetaLookup map[string]map[string]*protobuf.NodeMeta
-	TypeLookup map[string]string
 }
 
 func (c *Cluster) Name() string {
@@ -96,24 +105,39 @@ func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 		return
 	}
 
-	c.TypeLookup[n.Name] = meta.GetType()
-	typeMap, ok := c.MetaLookup[meta.GetType()]
-	if !ok {
-		typeMap = make(map[string]*protobuf.NodeMeta)
-		c.MetaLookup[meta.GetType()] = typeMap
-	}
-	typeMap[n.Name] = meta
-
-	metaHost, _, err := net.SplitHostPort(meta.GetAddr())
+	metaHost, metaPort, err := net.SplitHostPort(meta.Addr)
 	if metaHost == "" {
-		metaHost = n.Addr.String()
+		meta.Addr = n.Addr.String() + ":" + metaPort
 	}
 
-	// log.Printf("%s %s:%s [%s] joined from %s:%d", meta.GetType(), metaHost, metaPortString, n.Name, n.Addr, n.Port)
+	var m NodeMap
+
+	switch meta.Type {
+	case "edge":
+		m = c.Edge
+	case "entity":
+		m = c.Entity
+	case "chunk":
+		m = c.Chunk
+	default:
+		log.Printf("Unknown node type %s joined from %s:%d", meta.Type, n.Addr, n.Port)
+		return
+	}
+
+	c.TypeLookup[n.Name] = m
+
+	if _, exists := m[n.Name]; exists {
+		log.Printf("Duplicate %s node %s joined from %s:%d", meta.Type, n.Name, n.Addr, n.Port)
+		return
+	}
+
+	m[n.Name] = &Node{Meta: meta}
+
+	// log.Printf("%s %s:%s [%s] joined from %s:%d", meta.GetType(), metaHost, metaPort, n.Name, n.Addr, n.Port)
 }
 
 func (c *Cluster) NotifyLeave(n *memberlist.Node) {
-	typeMap, ok := c.MetaLookup[c.TypeLookup[n.Name]]
+	typeMap, ok := c.TypeLookup[n.Name]
 	if ok {
 		delete(typeMap, n.Name)
 	}
@@ -123,7 +147,7 @@ func (c *Cluster) NotifyLeave(n *memberlist.Node) {
 }
 
 func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
-	typeMap := c.MetaLookup[c.TypeLookup[n.Name]]
+	typeMap := c.TypeLookup[n.Name]
 
 	meta := &protobuf.NodeMeta{}
 	err := proto.Unmarshal(n.Meta, meta)
@@ -131,7 +155,7 @@ func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
 		log.Print("error unmarshalling node metadata: ", err)
 		return
 	}
-	typeMap[n.Name] = meta
+	typeMap[n.Name].Meta = meta
 }
 
 func (c *Cluster) NodeMeta(limit int) []byte {

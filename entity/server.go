@@ -205,10 +205,10 @@ func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error
 		return conn, nil
 	}
 
-	chunkServers := s.Cluster.MetaLookup["chunk"]
-	for _, meta := range chunkServers {
-		if *meta.X == x && *meta.Z == z {
-			conn, err := network.ConnectInternal(meta.GetAddr(), s)
+	chunkServers := s.Cluster.Chunk
+	for _, node := range chunkServers {
+		if *node.Meta.X == x && *node.Meta.Z == z {
+			conn, err := network.ConnectInternal(node.Meta.Addr, s)
 			if err != nil {
 				return nil, err
 			}
