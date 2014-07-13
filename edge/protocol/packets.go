@@ -171,20 +171,20 @@ func ReadShort(buf []byte, start int) (int, int) {
 	if start < 0 || start+2 > len(buf) {
 		return 0, -1
 	}
-	val := int(buf[start]) << 8
-	val |= int(buf[start+1])
-	return val, start + 2
+	val := int16(buf[start]) << 8
+	val |= int16(buf[start+1])
+	return int(val), start + 2
 }
 
 func ReadInt(buf []byte, start int) (int, int) {
 	if start < 0 || start+4 > len(buf) {
 		return 0, -1
 	}
-	val := int(buf[start]) << 24
-	val |= int(buf[start+1]) << 16
-	val |= int(buf[start+2]) << 8
-	val |= int(buf[start+3])
-	return val, start + 4
+	val := int32(buf[start]) << 24
+	val |= int32(buf[start+1]) << 16
+	val |= int32(buf[start+2]) << 8
+	val |= int32(buf[start+3])
+	return int(val), start + 4
 }
 
 func ReadLong(buf []byte, start int) (int64, int) {

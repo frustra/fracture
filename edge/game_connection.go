@@ -36,6 +36,8 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 	for cc.EntityServer != nil {
 		cc.Conn.SetReadDeadline(time.Now().Add(time.Second * 30))
 		id, buf, err := protocol.ReadPacket(cc.ConnEncrypted)
+		n := 0
+
 		if err != nil {
 			if err != io.EOF {
 				log.Printf("Error reading packet: %s", err.Error())
@@ -49,8 +51,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 				}
 			}
 		} else if id == 0x04 {
-			var n int = 0
-			cc.Player.X, n = protocol.ReadDouble(buf, 0)
+			cc.Player.X, n = protocol.ReadDouble(buf, n)
 			cc.Player.FeetY, n = protocol.ReadDouble(buf, n)
 			cc.Player.HeadY, n = protocol.ReadDouble(buf, n)
 			cc.Player.Z, n = protocol.ReadDouble(buf, n)
@@ -61,8 +62,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
 			})
 		} else if id == 0x05 {
-			var n int = 0
-			cc.Player.Yaw, n = protocol.ReadFloat(buf, 0)
+			cc.Player.Yaw, n = protocol.ReadFloat(buf, n)
 			cc.Player.Pitch, n = protocol.ReadFloat(buf, n)
 			cc.Player.OnGround, n = protocol.ReadBool(buf, n)
 
@@ -71,8 +71,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
 			})
 		} else if id == 0x06 {
-			var n int = 0
-			cc.Player.X, n = protocol.ReadDouble(buf, 0)
+			cc.Player.X, n = protocol.ReadDouble(buf, n)
 			cc.Player.FeetY, n = protocol.ReadDouble(buf, n)
 			cc.Player.HeadY, n = protocol.ReadDouble(buf, n)
 			cc.Player.Z, n = protocol.ReadDouble(buf, n)
@@ -84,6 +83,14 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 				Player: cc.Player,
 				Action: protobuf.PlayerAction_MOVE_ABSOLUTE,
 			})
+		} else if id == 0x07 {
+			status, n := protocol.ReadByte(buf, n)
+			x, n := protocol.ReadInt(buf, n)
+			y, n := protocol.ReadByte(buf, n)
+			z, n := protocol.ReadInt(buf, n)
+			face, n := protocol.ReadByte(buf, n)
+
+			log.Printf("digging block %d, %d, %d - status %d - face %d", x, y, z, status, face)
 		}
 	}
 }
