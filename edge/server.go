@@ -40,7 +40,18 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.PlayerListItemID, msg.Player.Username, true, int16(0))
 			s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, protocol.CreateJsonMessage(msg.Player.Username+" joined the game", "yellow"))
 			if msg.Uuid != msg.Player.Uuid {
-				metaData := []byte{0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x21, 0x01, 0x2c, 0x52, 0x00, 0x00, 0x00, 0x00, 0x66, 0x41, 0xa0, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x09, 0x00}
+				meta := protocol.NewMetadata(
+					protocol.AbsorptionHeartsID, float32(0),
+					protocol.OnFireID, false,
+					protocol.UnknownBitFieldID, byte(0),
+					protocol.AirID, uint16(0x012c),
+					protocol.ScoreID, uint32(0),
+					protocol.HealthID, float32(20),
+					protocol.PotionColorID, int32(0),
+					protocol.AmbientPotionID, byte(0),
+					protocol.ArrowCountID, byte(0),
+				)
+
 				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.SpawnPlayerID,
 					protocol.Varint{uint64(msg.Player.EntityId)},
 					msg.Player.Uuid,
@@ -52,13 +63,11 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 					byte(msg.Player.Yaw*256/2/math.Pi),
 					byte(msg.Player.Pitch*256/2/math.Pi),
 					int16(0),
-					metaData,
-					uint8(127),
+					meta,
 				)
 				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityMetadataID,
 					int32(msg.Player.EntityId),
-					metaData,
-					uint8(127),
+					meta,
 				)
 				s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.EntityPropertiesID,
 					int32(msg.Player.EntityId),

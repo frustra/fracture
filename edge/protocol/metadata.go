@@ -23,10 +23,15 @@ var (
 	ArrowCountID    = MetadataID{9, 0}
 	NameTagID       = MetadataID{10, 0}
 	ShowNameTagID   = MetadataID{11, 0}
+
+	UnknownBitFieldID  = MetadataID{16, 0} // byte
+	AbsorptionHeartsID = MetadataID{17, 0} // float32
+	ScoreID            = MetadataID{18, 0} // int32
 )
 
 type Metadata struct {
 	values map[byte]interface{}
+	order  []byte
 }
 
 func NewMetadata(v ...interface{}) *Metadata {
@@ -56,7 +61,8 @@ func NewMetadata(v ...interface{}) *Metadata {
 func (m *Metadata) Serialize() []byte {
 	buf := new(bytes.Buffer)
 
-	for key, val := range m.values {
+	for _, key := range m.order {
+		var val = m.values[key]
 		var typeId byte
 
 		switch val.(type) {
@@ -101,6 +107,10 @@ func (m *Metadata) Set(key MetadataID, val interface{}) {
 		default:
 			panic("unimplemented")
 		}
+	}
+
+	if _, existed := m.values[key.index]; !existed {
+		m.order = append(m.order, key.index)
 	}
 	m.values[key.index] = val
 }
