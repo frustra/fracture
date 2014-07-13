@@ -17,7 +17,7 @@ var _ = math.Inf
 
 type NodeMeta struct {
 	Addr             string `protobuf:"bytes,1,req,name=addr" json:"addr"`
-	Type             string `protobuf:"bytes,2,req,name=type" json:"type"`
+	Type             uint32 `protobuf:"varint,2,req,name=type" json:"type"`
 	X                *int64 `protobuf:"varint,3,opt,name=x" json:"x,omitempty"`
 	Z                *int64 `protobuf:"varint,4,opt,name=z" json:"z,omitempty"`
 	XXX_unrecognized []byte `json:"-"`
@@ -34,11 +34,11 @@ func (m *NodeMeta) GetAddr() string {
 	return ""
 }
 
-func (m *NodeMeta) GetType() string {
+func (m *NodeMeta) GetType() uint32 {
 	if m != nil {
 		return m.Type
 	}
-	return ""
+	return 0
 }
 
 func (m *NodeMeta) GetX() int64 {

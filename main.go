@@ -12,6 +12,7 @@ import (
 	"github.com/frustra/fracture/edge"
 	"github.com/frustra/fracture/entity"
 	"github.com/frustra/fracture/network"
+	"github.com/frustra/fracture/world"
 )
 
 func main() {
@@ -26,8 +27,8 @@ func main() {
 		size   = flag.Int("size", 16, "server size")
 
 		// Chunk server flags.
-		x = flag.Int64("x", 0, "x offset")
-		z = flag.Int64("z", 0, "z offset")
+		px = flag.Int64("x", 0, "x offset")
+		pz = flag.Int64("z", 0, "z offset")
 	)
 
 	log.SetFlags(log.Lmicroseconds)
@@ -40,20 +41,30 @@ func main() {
 	}
 
 	var server network.Server
+	meta := cluster.LocalNodeMeta
 
 	switch role {
 	case "edge":
+		meta.Type = network.EdgeType
 		server = &edge.Server{Addr: *addr, Cluster: cluster, Size: *size, Offset: *offset}
 
 	case "entity":
+		meta.Type = network.EntityType
 		server = &entity.Server{Addr: *addr, Cluster: cluster, Size: *size}
 
 	case "chunk":
-		*x *= chunk.ChunkWidthPerNode
-		*z *= chunk.ChunkWidthPerNode
-		chunkServer := &chunk.Server{Addr: *addr, Cluster: cluster, OffsetX: *x, OffsetZ: *z}
-		cluster.LocalNodeMeta.X = &chunkServer.OffsetX
-		cluster.LocalNodeMeta.Z = &chunkServer.OffsetZ
+		meta.Type = network.ChunkType
+		x, z := *px, *pz
+
+		chunkServer := &chunk.Server{
+			Addr:    *addr,
+			Cluster: cluster,
+			OffsetX: x * world.ChunkWidthPerNode,
+			OffsetZ: z * world.ChunkWidthPerNode,
+		}
+
+		meta.X = &chunkServer.OffsetX
+		meta.Z = &chunkServer.OffsetZ
 		server = chunkServer
 
 	default:
@@ -61,9 +72,7 @@ func main() {
 	}
 
 	log.SetPrefix(fmt.Sprintf("[%7s %-7s] ", role, *addr))
-
-	cluster.LocalNodeMeta.Type = server.NodeType()
-	cluster.LocalNodeMeta.Addr = ":" + strconv.Itoa(server.NodePort())
+	meta.Addr = ":" + strconv.Itoa(server.NodePort())
 
 	if err := cluster.Join(); err != nil {
 		log.Fatal("Failed to join cluster: ", err)

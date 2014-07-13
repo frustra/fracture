@@ -11,7 +11,18 @@ import (
 	"code.google.com/p/go-uuid/uuid"
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/frustra/fracture/protobuf"
+	"github.com/frustra/fracture/world"
 	"github.com/hashicorp/memberlist"
+)
+
+const (
+	EdgeType uint32 = iota
+	EntityType
+	ChunkType
+)
+
+var (
+	ErrMissingChunk = errors.New("missing chunk server")
 )
 
 type Node struct {
@@ -20,6 +31,8 @@ type Node struct {
 }
 
 type NodeMap map[string]*Node
+type ChunkNodeMap1D map[int64]*Node
+type ChunkNodeMap map[int64]ChunkNodeMap1D
 
 type Cluster struct {
 	Members *memberlist.Memberlist
@@ -27,11 +40,13 @@ type Cluster struct {
 
 	existing string
 
-	LocalNodeMeta  protobuf.NodeMeta
+	LocalNodeMeta  *protobuf.NodeMeta
 	nodeMetaBuffer []byte
 
-	Edge, Entity, Chunk NodeMap
-	TypeLookup          map[string]NodeMap
+	NodesByName NodeMap
+	EdgeNodes   NodeMap
+	EntityNodes NodeMap
+	ChunkNodes  ChunkNodeMap
 }
 
 func CreateCluster(addr, existing string) (*Cluster, error) {
@@ -54,12 +69,15 @@ func CreateCluster(addr, existing string) (*Cluster, error) {
 	}
 
 	c := &Cluster{
-		config:     config,
-		existing:   existing,
-		Edge:       make(NodeMap),
-		Entity:     make(NodeMap),
-		Chunk:      make(NodeMap),
-		TypeLookup: make(map[string]NodeMap),
+		config:   config,
+		existing: existing,
+
+		LocalNodeMeta: &protobuf.NodeMeta{},
+
+		NodesByName: make(NodeMap),
+		EdgeNodes:   make(NodeMap),
+		EntityNodes: make(NodeMap),
+		ChunkNodes:  make(ChunkNodeMap),
 	}
 
 	config.Delegate = c
@@ -75,7 +93,7 @@ func (c *Cluster) Name() string {
 }
 
 func (c *Cluster) Join() error {
-	nodeMeta, err := proto.Marshal(&c.LocalNodeMeta)
+	nodeMeta, err := proto.Marshal(c.LocalNodeMeta)
 	if err != nil {
 		return err
 	}
@@ -97,6 +115,32 @@ func (c *Cluster) Part() {
 	c.Members.Shutdown()
 }
 
+func (c *Cluster) ChunkConnection(x, z int64, h MessageHandler) (*InternalConnection, error) {
+	x, z = world.ChunkCoordsToNode(x, z)
+
+	zm := c.ChunkNodes[z]
+	if zm == nil {
+		return nil, ErrMissingChunk
+	}
+
+	node := zm[x]
+	if node == nil {
+		return nil, ErrMissingChunk
+	}
+
+	if node.Connection != nil {
+		return node.Connection, nil
+	}
+
+	conn, err := ConnectInternal(node.Meta.Addr, h)
+	if err != nil {
+		return nil, err
+	}
+
+	node.Connection = conn
+	return conn, nil
+}
+
 func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 	meta := &protobuf.NodeMeta{}
 	err := proto.Unmarshal(n.Meta, meta)
@@ -110,44 +154,68 @@ func (c *Cluster) NotifyJoin(n *memberlist.Node) {
 		meta.Addr = n.Addr.String() + ":" + metaPort
 	}
 
-	var m NodeMap
+	node := &Node{Meta: meta}
+
+	if _, exists := c.NodesByName[n.Name]; exists {
+		log.Printf("Duplicate node %s joined from %s:%d", n.Name, n.Addr, n.Port)
+		return
+	}
+
+	c.NodesByName[n.Name] = node
 
 	switch meta.Type {
-	case "edge":
-		m = c.Edge
-	case "entity":
-		m = c.Entity
-	case "chunk":
-		m = c.Chunk
+	case EdgeType:
+		c.EdgeNodes[n.Name] = node
+	case EntityType:
+		c.EntityNodes[n.Name] = node
+	case ChunkType:
+		x, z := meta.GetX(), meta.GetZ()
+		if c.ChunkNodes[z] == nil {
+			c.ChunkNodes[z] = make(ChunkNodeMap1D)
+		}
+		c.ChunkNodes[z][x] = node
 	default:
-		log.Printf("Unknown node type %s joined from %s:%d", meta.Type, n.Addr, n.Port)
+		log.Printf("Unknown node type %d joined from %s:%d", meta.Type, n.Addr, n.Port)
 		return
 	}
-
-	c.TypeLookup[n.Name] = m
-
-	if _, exists := m[n.Name]; exists {
-		log.Printf("Duplicate %s node %s joined from %s:%d", meta.Type, n.Name, n.Addr, n.Port)
-		return
-	}
-
-	m[n.Name] = &Node{Meta: meta}
 
 	// log.Printf("%s %s:%s [%s] joined from %s:%d", meta.GetType(), metaHost, metaPort, n.Name, n.Addr, n.Port)
 }
 
 func (c *Cluster) NotifyLeave(n *memberlist.Node) {
-	typeMap, ok := c.TypeLookup[n.Name]
-	if ok {
-		delete(typeMap, n.Name)
-	}
-	delete(c.TypeLookup, n.Name)
+	node, exists := c.NodesByName[n.Name]
 
-	// log.Printf("%s left", n.Name)
+	if exists {
+		switch node.Meta.Type {
+		case EdgeType:
+			delete(c.EdgeNodes, n.Name)
+		case EntityType:
+			delete(c.EntityNodes, n.Name)
+		case ChunkType:
+			x, z := node.Meta.GetX(), node.Meta.GetZ()
+
+			zm := c.ChunkNodes[z]
+			if zm != nil {
+				delete(zm, x)
+				if len(zm) == 0 {
+					delete(c.ChunkNodes, z)
+				}
+			} else {
+				log.Printf("Unmapped chunk node %s left from %s:%d", n.Name, n.Addr, n.Port)
+			}
+		}
+
+		delete(c.NodesByName, n.Name)
+	} else {
+		log.Printf("Unknown node %s left from %s:%d", n.Name, n.Addr, n.Port)
+	}
 }
 
 func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
-	typeMap := c.TypeLookup[n.Name]
+	node := c.NodesByName[n.Name]
+	if node == nil {
+		log.Printf("Unknown node %s updated from %s:%d", n.Name, n.Addr, n.Port)
+	}
 
 	meta := &protobuf.NodeMeta{}
 	err := proto.Unmarshal(n.Meta, meta)
@@ -155,7 +223,8 @@ func (c *Cluster) NotifyUpdate(n *memberlist.Node) {
 		log.Print("error unmarshalling node metadata: ", err)
 		return
 	}
-	typeMap[n.Name].Meta = meta
+
+	node.Meta = meta
 }
 
 func (c *Cluster) NodeMeta(limit int) []byte {

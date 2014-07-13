@@ -14,8 +14,8 @@ It is generated from these files:
 	chunk_response.proto
 	internal_message.proto
 	node_meta.proto
-	player_action.proto
 	player.proto
+	player_action.proto
 	subscription.proto
 
 It has these top-level messages:

@@ -7,10 +7,7 @@ import (
 
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
-)
-
-const (
-	ChunkWidthPerNode = 8 // Side length of a square.
+	"github.com/frustra/fracture/world"
 )
 
 type Server struct {
@@ -20,7 +17,7 @@ type Server struct {
 	OffsetX, OffsetZ int64
 	Listeners        map[*network.InternalConnection]bool
 
-	storage [ChunkWidthPerNode][ChunkWidthPerNode]*Chunk // [z][x]
+	storage [world.ChunkWidthPerNode][world.ChunkWidthPerNode]*world.Chunk // [z][x]
 
 	blockUpdateChannel chan *protobuf.BlockUpdate
 }
@@ -32,9 +29,9 @@ func (s *Server) Serve() error {
 
 	blockType := byte(((s.OffsetX+8)/8+(s.OffsetZ+8)/4)%4 + 1)
 
-	for z := int64(0); z < ChunkWidthPerNode; z++ {
-		for x := int64(0); x < ChunkWidthPerNode; x++ {
-			c := NewChunk(s.OffsetX+x, s.OffsetZ+z)
+	for z := int64(0); z < world.ChunkWidthPerNode; z++ {
+		for x := int64(0); x < world.ChunkWidthPerNode; x++ {
+			c := world.NewChunk(s.OffsetX+x, s.OffsetZ+z)
 			c.Generate(blockType)
 			s.storage[z][x] = c
 		}
@@ -50,27 +47,43 @@ func (s *Server) Loop() {
 	for {
 		select {
 		case update := <-s.blockUpdateChannel:
-			cx, cz := WorldCoordsToChunk(update.X, update.Z)
-			cx -= s.OffsetX
-			cz -= s.OffsetZ
+			chunk := s.GetChunk(world.WorldCoordsToChunk(update.X, update.Z))
 
-			if cx < 0 || cz < 0 || cx >= ChunkWidthPerNode || cz >= ChunkWidthPerNode {
+			if chunk == nil {
 				log.Printf("Received block update for someone else's chunk: %#v", update)
-			} else {
-				chunk := s.storage[cz][cx]
-				x, z := WorldCoordsToChunkInternal(update.X, update.Z)
-				y := update.Y
+				continue
+			}
 
-				chunk.Set(x, int64(y), z, byte(update.BlockId))
-				chunk.SetMetadata(x, int64(y), z, byte(update.BlockMetadata))
-				chunk.CalculateSkyLightingForColumn(x, z)
+			x, z := world.WorldCoordsToChunkInternal(update.X, update.Z)
+			y := update.Y
 
-				for conn, _ := range s.Listeners {
-					conn.SendMessage(update)
-				}
+			chunk.Set(x, int64(y), z, byte(update.BlockId))
+			chunk.SetMetadata(x, int64(y), z, byte(update.BlockMetadata))
+			chunk.CalculateSkyLightingForColumn(x, z)
+
+			for conn, _ := range s.Listeners {
+				conn.SendMessage(update)
 			}
 		}
 	}
+}
+
+func (s *Server) LocalChunkCoords(x, z int64) (int64, int64) {
+	return x - s.OffsetX, z - s.OffsetZ
+}
+
+func (s *Server) ContainsLocalChunk(x, z int64) bool {
+	return x >= 0 && z >= 0 && x < world.ChunkWidthPerNode && z < world.ChunkWidthPerNode
+}
+
+func (s *Server) GetChunk(x, z int64) *world.Chunk {
+	x, z = s.LocalChunkCoords(x, z)
+
+	if s.ContainsLocalChunk(x, z) {
+		return s.storage[z][x]
+	}
+
+	return nil
 }
 
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
@@ -83,7 +96,7 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 			delete(s.Listeners, conn)
 		}
 	case *protobuf.ChunkRequest:
-		x, z := req.X-s.OffsetX, req.Z-s.OffsetZ
+		chunk := s.GetChunk(req.X, req.Z)
 
 		res := &protobuf.ChunkResponse{
 			X:    req.X,
@@ -91,20 +104,16 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 			Uuid: req.Uuid,
 		}
 
-		if x < 0 || z < 0 || x >= ChunkWidthPerNode || z >= ChunkWidthPerNode {
-			res.Data = make([]byte, 0)
+		if chunk != nil {
+			res.Data = chunk.MarshallCompressed()
 		} else {
-			res.Data = s.storage[z][x].MarshallCompressed()
+			res.Data = make([]byte, 0)
 		}
 
 		conn.SendMessage(res)
 	case *protobuf.BlockUpdate:
 		s.blockUpdateChannel <- req
 	}
-}
-
-func (s *Server) NodeType() string {
-	return "chunk"
 }
 
 func (s *Server) NodePort() int {

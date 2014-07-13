@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net"
 
-	"github.com/frustra/fracture/chunk"
 	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
@@ -22,7 +21,6 @@ type Server struct {
 	keyPair *protocol.KeyPair
 
 	EntityServers     map[*network.InternalConnection]int
-	ChunkServers      map[chunk.ChunkCoord]*network.InternalConnection
 	Clients           map[*GameConnection]bool
 	PlayerConnections map[string]chan *protocol.Packet
 }
@@ -148,7 +146,6 @@ func (s *Server) Serve() error {
 
 	s.Clients = make(map[*GameConnection]bool)
 	s.EntityServers = make(map[*network.InternalConnection]int)
-	s.ChunkServers = make(map[chunk.ChunkCoord]*network.InternalConnection)
 	s.PlayerConnections = make(map[string]chan *protocol.Packet)
 
 	for {
@@ -165,10 +162,6 @@ func (s *Server) Serve() error {
 		s.Clients[client] = true
 		go client.HandleAuth()
 	}
-}
-
-func (s *Server) NodeType() string {
-	return "edge"
 }
 
 func (s *Server) NodePort() int {
@@ -205,7 +198,7 @@ func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalCon
 	if closestServer != nil {
 		return closestServer, nil
 	} else {
-		entityServers := s.Cluster.Entity
+		entityServers := s.Cluster.EntityNodes
 		serverRange := make([]string, len(entityServers))
 		i := 0
 		for _, node := range entityServers {
@@ -219,26 +212,4 @@ func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalCon
 			return nil, errors.New("No entity servers available!")
 		}
 	}
-}
-
-func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error) {
-	x, z = chunk.ChunkCoordsToNode(x, z)
-	coord := chunk.ChunkCoord{x, z}
-
-	if conn, exists := s.ChunkServers[coord]; exists {
-		return conn, nil
-	}
-
-	chunkServers := s.Cluster.Chunk
-	for _, node := range chunkServers {
-		if *node.Meta.X == x && *node.Meta.Z == z {
-			conn, err := network.ConnectInternal(node.Meta.Addr, s)
-			if err != nil {
-				return nil, err
-			}
-			s.ChunkServers[coord] = conn
-			return conn, nil
-		}
-	}
-	return nil, errors.New("No chunk server for this area!")
 }

@@ -6,7 +6,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/frustra/fracture/chunk"
 	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
@@ -95,12 +94,12 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			z, n := protocol.ReadInt(buf, n)
 			face, n := protocol.ReadByte(buf, n)
 
-			chunkServer, err := cc.Server.FindChunkServer(chunk.WorldCoordsToChunk(int64(x), int64(z)))
+			chunkConn, err := cc.Server.Cluster.ChunkConnection(int64(x), int64(z), cc.Server)
 			if err != nil {
 				log.Print("Tried to destroy block on missing chunk server: ", err)
 			}
 
-			chunkServer.SendMessage(&protobuf.BlockUpdate{
+			chunkConn.SendMessage(&protobuf.BlockUpdate{
 				X:       int64(x),
 				Y:       uint32(y),
 				Z:       int64(z),
@@ -127,7 +126,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 			cursorZ, n := protocol.ReadByte(buf, n)
 
 			if blockId > 0 && blockId < 256 && face < 6 {
-				chunkServer, err := cc.Server.FindChunkServer(chunk.WorldCoordsToChunk(int64(x), int64(z)))
+				chunkConn, err := cc.Server.Cluster.ChunkConnection(int64(x), int64(z), cc.Server)
 				if err != nil {
 					log.Print("Tried to destroy block on missing chunk server: ", err)
 				}
@@ -147,7 +146,7 @@ func (cc *GameConnection) HandleEncryptedConnection() {
 					x++
 				}
 
-				chunkServer.SendMessage(&protobuf.BlockUpdate{
+				chunkConn.SendMessage(&protobuf.BlockUpdate{
 					X:             int64(x),
 					Y:             uint32(y),
 					Z:             int64(z),
@@ -189,7 +188,7 @@ func (cc *GameConnection) HandleNewConnection() {
 	var x, z int64
 	for x = -8; x < 8; x++ {
 		for z = -8; z < 8; z++ {
-			conn, err := cc.Server.FindChunkServer(x, z)
+			conn, err := cc.Server.Cluster.ChunkConnection(x, z, cc.Server)
 			if err != nil {
 				log.Printf("Failed to connect to chunk server (%d, %d): %s", x, z, err)
 				protocol.WriteNewPacket(cc.ConnEncrypted, protocol.PreAuthKickID, protocol.CreateJsonMessage("Failed to connect to chunk server!", ""))

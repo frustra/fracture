@@ -4,7 +4,7 @@ import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
 
 message NodeMeta {
 	required string addr = 1 [(gogoproto.nullable) = false];
-	required string type = 2 [(gogoproto.nullable) = false];
+	required uint32 type = 2 [(gogoproto.nullable) = false];
 	optional int64 x = 3;
 	optional int64 z = 4;
 }
