@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -28,6 +29,7 @@ func main() {
 		z = flag.Int64("z", 0, "z offset")
 	)
 
+	log.SetFlags(log.Lmicroseconds)
 	flag.Parse()
 	role := flag.Arg(0)
 
@@ -56,6 +58,8 @@ func main() {
 	default:
 		log.Fatal("Invalid role: ", role)
 	}
+
+	log.SetPrefix(fmt.Sprintf("[%7s %-7s] ", role, *addr))
 
 	cluster.LocalNodeMeta.Type = server.NodeType()
 	cluster.LocalNodeMeta.Addr = ":" + strconv.Itoa(server.NodePort())
