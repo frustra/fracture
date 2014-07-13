@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	BlockHeight    = 16 // Subchunks per chunk
-	BlockYSize     = 16 // Y blocks per chunk
-	BlockXSize     = 16 // X blocks per chunk
-	BlockZSize     = 16 // Z blocks per chunk
-	BlockArraySize = BlockHeight * BlockYSize * BlockZSize * BlockXSize
+	BlockHeight     = 16 // Subchunks per chunk
+	BlockYSize      = 16 // Y blocks per chunk
+	BlockXSize      = 16 // X blocks per chunk
+	BlockZSize      = 16 // Z blocks per chunk
+	BlockArraySize  = BlockHeight * BlockYSize * BlockZSize * BlockXSize
+	TotalBlockYSize = BlockYSize * BlockHeight
 )
 
 // A Chunk column really.
@@ -21,6 +22,9 @@ type Chunk struct {
 	OffsetX, OffsetZ int64
 
 	BlockTypes [BlockArraySize]byte
+	BlockLight [BlockArraySize / 2]byte
+	BlockMeta  [BlockArraySize / 2]byte
+	SkyLight   [BlockArraySize / 2]byte
 }
 
 func NewChunk(offsetX, offsetZ int64) *Chunk {
@@ -30,12 +34,32 @@ func NewChunk(offsetX, offsetZ int64) *Chunk {
 	}
 }
 
+func indexOf(x, y, z int) int {
+	return y*BlockZSize*BlockXSize + z*BlockXSize + x
+}
+
+func setInHalfArray(arr []byte, x, y, z int, val byte) {
+	index := indexOf(x, y, z)
+	shift := uint(index%2) * 4
+	index /= 2
+
+	arr[index] = (arr[index] & (0xf0 >> shift)) | (val << shift)
+}
+
 func (c *Chunk) Set(x, y, z int, val byte) {
-	c.BlockTypes[y*BlockZSize*BlockXSize+z*BlockXSize+x] = val
+	c.BlockTypes[indexOf(x, y, z)] = val
 }
 
 func (c *Chunk) Get(x, y, z int) byte {
-	return c.BlockTypes[y*BlockZSize*BlockXSize+z*BlockXSize+x]
+	return c.BlockTypes[indexOf(x, y, z)]
+}
+
+func (c *Chunk) SetBlockLight(x, y, z int, val byte) {
+	setInHalfArray(c.BlockLight[:], x, y, z, val)
+}
+
+func (c *Chunk) SetSkyLight(x, y, z int, val byte) {
+	setInHalfArray(c.SkyLight[:], x, y, z, val)
 }
 
 func (c *Chunk) Clear() {
@@ -64,6 +88,28 @@ func (c *Chunk) Generate(blockType byte) {
 			c.Set(x, height, z, blockType)
 		}
 	}
+
+	for z := 0; z < BlockZSize; z++ {
+		for x := 0; x < BlockXSize; x++ {
+			var light byte = 15
+			for y := TotalBlockYSize - 1; y >= 0; y-- {
+				c.SetSkyLight(x, y, z, light)
+
+				if light == 0 {
+					continue
+				}
+
+				block := c.Get(x, y, z)
+				if block != 0 {
+					if block == 9 { // Transparent.
+						light--
+					} else { // Opaque.
+						light = 0
+					}
+				}
+			}
+		}
+	}
 }
 
 func (c *Chunk) Cube(y int) []byte {
@@ -76,29 +122,61 @@ func (c *Chunk) MarshallCompressed() []byte {
 	var compressed bytes.Buffer
 	w := zlib.NewWriter(&compressed)
 	c.WriteTo(w)
-	meta := make([]byte, 16*16*16*16/2)
-	w.Write(meta)
-	light := make([]byte, 16*16*16*16/2)
-	for i := 0; i < len(light); i++ {
-		light[i] = 15 | 15<<4
-	}
-	w.Write(light)
-	w.Write(light)
 	w.Close()
 	return compressed.Bytes()
 }
 
 func (c *Chunk) UnmarshallCompressed(buf []byte) error {
-	w, err := zlib.NewReader(bytes.NewReader(buf))
+	r, err := zlib.NewReader(bytes.NewReader(buf))
+	if err != nil {
+		return err
+	}
+	return c.ReadFrom(r)
+}
+
+func (c *Chunk) ReadFrom(r io.Reader) error {
+	b := bytes.NewBuffer(c.BlockTypes[0:0])
+	_, err := io.Copy(b, r)
 	if err != nil {
 		return err
 	}
 
-	b := bytes.NewBuffer(c.BlockTypes[0:0])
-	_, err = io.Copy(b, w)
+	b = bytes.NewBuffer(c.BlockMeta[0:0])
+	_, err = io.Copy(b, r)
+	if err != nil {
+		return err
+	}
+
+	b = bytes.NewBuffer(c.BlockLight[0:0])
+	_, err = io.Copy(b, r)
+	if err != nil {
+		return err
+	}
+
+	b = bytes.NewBuffer(c.SkyLight[0:0])
+	_, err = io.Copy(b, r)
 	return err
 }
 
 func (c *Chunk) WriteTo(w io.Writer) (int, error) {
-	return w.Write(c.BlockTypes[:])
+	count, err := w.Write(c.BlockTypes[:])
+	if err != nil {
+		return count, err
+	}
+
+	n, err := w.Write(c.BlockMeta[:])
+	count += n
+	if err != nil {
+		return count, err
+	}
+
+	n, err = w.Write(c.BlockLight[:])
+	count += n
+	if err != nil {
+		return count, err
+	}
+
+	n, err = w.Write(c.SkyLight[:])
+	count += n
+	return count, err
 }
