@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/zlib"
 	"io"
+
+	"github.com/frustra/fracture/perlin"
 )
 
 const (
@@ -43,15 +45,23 @@ func (c *Chunk) Clear() {
 }
 
 func (c *Chunk) Generate(blockType byte) {
-	for y := 0; y < BlockYSize*BlockHeight; y++ {
-		for z := 0; z < BlockZSize; z++ {
-			for x := 0; x < BlockXSize; x++ {
-				if y < 100 {
-					c.Set(x, y, z, 3)
-				} else if y == 100 {
-					c.Set(x, y, z, blockType)
-				}
+	noise := perlin.NewNoise2D(0)
+
+	for z := 0; z < BlockZSize; z++ {
+		for x := 0; x < BlockXSize; x++ {
+			absx, absz := float64(x+int(c.OffsetX*BlockXSize)), float64(z+int(c.OffsetZ*BlockZSize))
+			r := noise.At(absx/70, absz/70) + 0.8
+			r += (noise.At(absx/20, absz/20) + 0.6) / 3
+
+			height := int(r * 16 * 3)
+
+			for y := 0; y < height; y++ {
+				c.Set(x, y, z, 3)
 			}
+			for y := height; y < 42; y++ {
+				c.Set(x, y, z, 9)
+			}
+			c.Set(x, height, z, blockType)
 		}
 	}
 }
