@@ -16,7 +16,7 @@ It is generated from these files:
 	node_meta.proto
 	player_action.proto
 	player.proto
-	subscribe.proto
+	subscription.proto
 
 It has these top-level messages:
 	BlockUpdate

@@ -75,8 +75,13 @@ func (s *Server) Loop() {
 
 func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnection) {
 	switch req := message.(type) {
-	case *protobuf.Subscribe:
-		s.Listeners[conn] = true
+	case *protobuf.Subscription:
+		if req.Subscribe {
+			log.Printf("Got subscription from (%d, %d): %s", s.OffsetX, s.OffsetZ, conn)
+			s.Listeners[conn] = true
+		} else {
+			delete(s.Listeners, conn)
+		}
 	case *protobuf.ChunkRequest:
 		x, z := req.X-s.OffsetX, req.Z-s.OffsetZ
 

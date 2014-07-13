@@ -107,20 +107,18 @@ func (c *Chunk) CalculateLighting() {
 func (c *Chunk) CalculateSkyLightingForColumn(x, z int64) {
 	var light byte = 15
 	for y := TotalBlockYSize - 1; y >= 0; y-- {
-		c.SetSkyLight(x, y, z, light)
-
-		if light == 0 {
-			continue
-		}
-
-		block := c.Get(x, y, z)
-		if block != 0 {
-			if block == 9 { // Transparent.
-				light--
-			} else { // Opaque.
-				light = 0
+		if light != 0 {
+			block := c.Get(x, y, z)
+			if block != 0 {
+				if block == 9 { // Transparent.
+					light -= 3
+				} else { // Opaque.
+					light = 0
+				}
 			}
 		}
+
+		c.SetSkyLight(x, y, z, light)
 	}
 }
 

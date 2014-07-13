@@ -23,7 +23,7 @@ type InternalMessage struct {
 	PlayerAction      *PlayerAction      `protobuf:"bytes,5,opt" json:"PlayerAction,omitempty"`
 	BlockUpdate       *BlockUpdate       `protobuf:"bytes,6,opt" json:"BlockUpdate,omitempty"`
 	ChatMessage       *ChatMessage       `protobuf:"bytes,7,opt" json:"ChatMessage,omitempty"`
-	Subscribe         *Subscribe         `protobuf:"bytes,8,opt" json:"Subscribe,omitempty"`
+	Subscription      *Subscription      `protobuf:"bytes,8,opt" json:"Subscription,omitempty"`
 	XXX_unrecognized  []byte             `json:"-"`
 }
 
@@ -80,9 +80,9 @@ func (m *InternalMessage) GetChatMessage() *ChatMessage {
 	return nil
 }
 
-func (m *InternalMessage) GetSubscribe() *Subscribe {
+func (m *InternalMessage) GetSubscription() *Subscription {
 	if m != nil {
-		return m.Subscribe
+		return m.Subscription
 	}
 	return nil
 }
@@ -111,8 +111,8 @@ func (this *InternalMessage) GetValue() interface{} {
 	if this.ChatMessage != nil {
 		return this.ChatMessage
 	}
-	if this.Subscribe != nil {
-		return this.Subscribe
+	if this.Subscription != nil {
+		return this.Subscription
 	}
 	return nil
 }
@@ -133,8 +133,8 @@ func (this *InternalMessage) SetValue(value interface{}) bool {
 		this.BlockUpdate = vt
 	case *ChatMessage:
 		this.ChatMessage = vt
-	case *Subscribe:
-		this.Subscribe = vt
+	case *Subscription:
+		this.Subscription = vt
 	default:
 		return false
 	}

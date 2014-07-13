@@ -8,7 +8,7 @@ import "bulk_chunk_response.proto";
 import "player_action.proto";
 import "block_update.proto";
 import "chat_message.proto";
-import "subscribe.proto";
+import "subscription.proto";
 
 message InternalMessage {
 	option (gogoproto.onlyone) = true;
@@ -19,5 +19,5 @@ message InternalMessage {
 	optional PlayerAction PlayerAction = 5;
 	optional BlockUpdate BlockUpdate = 6;
 	optional ChatMessage ChatMessage = 7;
-	optional Subscribe Subscribe = 8;
+	optional Subscription Subscription = 8;
 }

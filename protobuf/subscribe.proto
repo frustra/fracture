@@ -1,8 +1,0 @@
-package protobuf;
-
-import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
-
-message Subscribe {
-	optional string uuid = 1 [(gogoproto.nullable) = false];
-}
-

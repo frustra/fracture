@@ -1,0 +1,9 @@
+package protobuf;
+
+import "code.google.com/p/gogoprotobuf/gogoproto/gogo.proto";
+
+message Subscription {
+	required bool subscribe = 1 [(gogoproto.nullable) = false];
+	optional string uuid = 2 [(gogoproto.nullable) = false];
+}
+

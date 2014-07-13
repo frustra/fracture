@@ -1,5 +1,9 @@
 package chunk
 
+type ChunkCoord struct {
+	X, Z int64
+}
+
 func ChunkCoordsToNode(x, z int64) (nx, nz int64) {
 	if x < 0 {
 		x += 1 - ChunkWidthPerNode

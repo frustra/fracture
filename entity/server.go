@@ -1,11 +1,13 @@
 package entity
 
 import (
+	"errors"
 	"log"
 	"math"
 	"net"
 	"strconv"
 
+	"github.com/frustra/fracture/chunk"
 	"github.com/frustra/fracture/edge/protocol"
 	"github.com/frustra/fracture/network"
 	"github.com/frustra/fracture/protobuf"
@@ -15,8 +17,9 @@ type Server struct {
 	Addr    string
 	Cluster *network.Cluster
 
-	Size    int
-	Players map[string]*PlayerEntity
+	Size         int
+	Players      map[string]*PlayerEntity
+	ChunkServers map[chunk.ChunkCoord]*network.InternalConnection
 }
 
 type PlayerEntity struct {
@@ -31,6 +34,7 @@ func (s *Server) Serve() error {
 	log.Printf("Entity server loading on %s\n", s.Addr)
 
 	s.Players = make(map[string]*PlayerEntity)
+	s.ChunkServers = make(map[chunk.ChunkCoord]*network.InternalConnection)
 
 	return network.ServeInternal(s.Addr, s)
 }
@@ -79,6 +83,20 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 			}
 
 			log.Printf("Player joined (%d): %s", player.EntityId, player.Username)
+
+			cx, cz := chunk.ChunkCoordsToNode(0, 0)
+			for ix := cx; ix >= cx-chunk.ChunkWidthPerNode; ix -= chunk.ChunkWidthPerNode {
+				for iz := cz; iz >= cz-chunk.ChunkWidthPerNode; iz -= chunk.ChunkWidthPerNode {
+					conn, err := s.FindChunkServer(ix, iz)
+					if err != nil {
+						log.Printf("Chunk subscription error (%d, %d): %s", ix, iz, err)
+						continue
+					}
+					conn.SendMessage(&protobuf.Subscription{
+						Subscribe: true,
+					})
+				}
+			}
 
 			for uuid, p := range s.Players {
 				p.Conn.SendMessage(&protobuf.PlayerAction{
@@ -178,4 +196,25 @@ func (s *Server) NodePort() int {
 	_, metaPortString, _ := net.SplitHostPort(s.Addr)
 	port, _ := strconv.Atoi(metaPortString)
 	return port
+}
+
+func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error) {
+	coord := chunk.ChunkCoord{x, z}
+
+	if conn, exists := s.ChunkServers[coord]; exists {
+		return conn, nil
+	}
+
+	chunkServers := s.Cluster.MetaLookup["chunk"]
+	for _, meta := range chunkServers {
+		if *meta.X == x && *meta.Z == z {
+			conn, err := network.ConnectInternal(meta.GetAddr(), s)
+			if err != nil {
+				return nil, err
+			}
+			s.ChunkServers[coord] = conn
+			return conn, nil
+		}
+	}
+	return nil, errors.New("No chunk server for this area!")
 }

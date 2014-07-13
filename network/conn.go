@@ -91,6 +91,10 @@ func (c *InternalConnection) Close() error {
 	return c.conn.Close()
 }
 
+func (c *InternalConnection) String() string {
+	return c.conn.RemoteAddr().String()
+}
+
 func StartInternalConnection(conn net.Conn, handler MessageHandler) *InternalConnection {
 	i := &InternalConnection{
 		handler: handler,

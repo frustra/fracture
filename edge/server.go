@@ -13,10 +13,6 @@ import (
 	"github.com/frustra/fracture/protobuf"
 )
 
-type ChunkCoord struct {
-	X, Z int64
-}
-
 type Server struct {
 	Addr    string
 	Offset  int64
@@ -26,7 +22,7 @@ type Server struct {
 	keyPair *protocol.KeyPair
 
 	EntityServers     map[*network.InternalConnection]int
-	ChunkServers      map[ChunkCoord]*network.InternalConnection
+	ChunkServers      map[chunk.ChunkCoord]*network.InternalConnection
 	Clients           map[*GameConnection]bool
 	PlayerConnections map[string]chan *protocol.Packet
 }
@@ -38,7 +34,8 @@ func (s *Server) HandleMessage(message interface{}, conn *network.InternalConnec
 	case *protobuf.ChatMessage:
 		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.ChatMessageID, msg.Message)
 	case *protobuf.BlockUpdate:
-		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.BlockChangeID, int32(msg.X), uint8(msg.Y), int32(msg.Z), msg.BlockId, msg.BlockMetadata)
+		log.Printf("Sending block update to: %s", msg.Uuid)
+		s.PlayerConnections[msg.Uuid] <- protocol.CreatePacket(protocol.BlockChangeID, int32(msg.X), uint8(msg.Y), int32(msg.Z), protocol.Varint{uint64(msg.BlockId)}, uint8(msg.BlockMetadata))
 	case *protobuf.PlayerAction:
 		switch msg.Action {
 		case protobuf.PlayerAction_JOIN:
@@ -151,7 +148,7 @@ func (s *Server) Serve() error {
 
 	s.Clients = make(map[*GameConnection]bool)
 	s.EntityServers = make(map[*network.InternalConnection]int)
-	s.ChunkServers = make(map[ChunkCoord]*network.InternalConnection)
+	s.ChunkServers = make(map[chunk.ChunkCoord]*network.InternalConnection)
 	s.PlayerConnections = make(map[string]chan *protocol.Packet)
 
 	for {
@@ -226,7 +223,7 @@ func (s *Server) FindEntityServer(player *protobuf.Player) (*network.InternalCon
 
 func (s *Server) FindChunkServer(x, z int64) (*network.InternalConnection, error) {
 	x, z = chunk.ChunkCoordsToNode(x, z)
-	coord := ChunkCoord{x, z}
+	coord := chunk.ChunkCoord{x, z}
 
 	if conn, exists := s.ChunkServers[coord]; exists {
 		return conn, nil
